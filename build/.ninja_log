@@ -1,0 +1,7 @@
+# ninja log v7
+27	346	1794133105822605600	CMakeFiles/m0_linux_x11.dir/src/platform/linux/m0_linux_x11.cpp.o	a552ec3b98bbd491
+465	1363	1794133106254792100	m0_linux_x11	32eab1a4caa88c59
+109	546	1794133724642535300	CMakeFiles/m0_linux_x11.dir/src/platform/linux/m0_linux_x11.cpp.o	a552ec3b98bbd491
+558	1338	1794133725081727000	m0_linux_x11	32eab1a4caa88c59
+63	295	1794133732424222200	CMakeFiles/m0_linux_x11.dir/src/platform/linux/m0_linux_x11.cpp.o	a552ec3b98bbd491
+317	1103	1794133732675798700	m0_linux_x11	32eab1a4caa88c59

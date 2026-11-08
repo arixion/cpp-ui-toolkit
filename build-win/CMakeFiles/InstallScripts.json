@@ -1,0 +1,8 @@
+{
+	"InstallScripts" : 
+	[
+		"C:/Users/ARPAN/Work/VibeCoding/cpp-ui-toolkit/build-win/cmake_install.cmake",
+		"C:/Users/ARPAN/Work/VibeCoding/cpp-ui-toolkit/build-win/_deps/nanosvg-build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

@@ -1,0 +1,25 @@
+# ninja log v7
+9	952	8158449482034864	CMakeFiles/m0_win.dir/src/platform/windows/m0_win.cpp.obj	400dd740a73ce8f3
+952	1248	8158449491462433	m0_win.exe	1bd175c175f9e46e
+4	8077	8158452507155865	build.ninja	cd3003dc2a19293a
+4	8077	8158452506903946	C:/Users/ARPAN/Work/VibeCoding/cpp-ui-toolkit/build-win/cmake_install.cmake	cd3003dc2a19293a
+34	144	8158415195690287	_deps/nanosvg-build/CMakeFiles/nanosvgrast.dir/nanosvgrast.c.obj	108ebbc069041293
+11	166	8158415195456653	_deps/nanosvg-build/CMakeFiles/nanosvg.dir/nanosvg.c.obj	3d9c60b68ccc4f78
+167	1650	8158415197007723	_deps/nanosvg-build/nanosvg.lib	95dc0bd425f2e1ce
+1650	1886	8158415211845297	_deps/nanosvg-build/nanosvgrast.lib	5db195fa20699826
+4	8077	8158452507067599	C:/Users/ARPAN/Work/VibeCoding/cpp-ui-toolkit/build-win/_deps/nanosvg-build/cmake_install.cmake	cd3003dc2a19293a
+5	8011	8158452507155865	build.ninja	cd3003dc2a19293a
+5	8011	8158452507155865	C:/Users/ARPAN/Work/VibeCoding/cpp-ui-toolkit/build-win/cmake_install.cmake	cd3003dc2a19293a
+5	8011	8158452507155865	C:/Users/ARPAN/Work/VibeCoding/cpp-ui-toolkit/build-win/_deps/nanosvg-build/cmake_install.cmake	cd3003dc2a19293a
+8	1133	8158452861561104	CMakeFiles/m0_win.dir/src/platform/windows/m0_win.cpp.obj	400dd740a73ce8f3
+1134	1462	8158452872823226	m0_win.exe	5030531e32c072fb
+11	1223	8158455402029066	CMakeFiles/m0_win.dir/src/platform/windows/m0_win.cpp.obj	400dd740a73ce8f3
+1224	1541	8158455414156980	m0_win.exe	5030531e32c072fb
+11	1237	8158457584179974	CMakeFiles/m0_win.dir/src/platform/windows/m0_win.cpp.obj	400dd740a73ce8f3
+1239	1546	8158457596458681	m0_win.exe	5030531e32c072fb
+11	1224	8158458714447330	CMakeFiles/m0_win.dir/src/platform/windows/m0_win.cpp.obj	400dd740a73ce8f3
+1225	1528	8158458726589795	m0_win.exe	5030531e32c072fb
+10	1076	8158460973411519	CMakeFiles/m0_win.dir/src/platform/windows/m0_win.cpp.obj	400dd740a73ce8f3
+1077	1365	8158460984075355	m0_win.exe	5030531e32c072fb
+10	1094	8158461891093931	CMakeFiles/m0_win.dir/src/platform/windows/m0_win.cpp.obj	400dd740a73ce8f3
+1094	1385	8158461901936620	m0_win.exe	5030531e32c072fb

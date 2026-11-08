@@ -1,0 +1,14 @@
+# Target labels
+ nanosvg-populate
+# Source files and their labels
+C:/Users/ARPAN/Work/VibeCoding/cpp-ui-toolkit/build-win/_deps/nanosvg-subbuild/CMakeFiles/nanosvg-populate
+C:/Users/ARPAN/Work/VibeCoding/cpp-ui-toolkit/build-win/_deps/nanosvg-subbuild/CMakeFiles/nanosvg-populate.rule
+C:/Users/ARPAN/Work/VibeCoding/cpp-ui-toolkit/build-win/_deps/nanosvg-subbuild/CMakeFiles/nanosvg-populate-complete.rule
+C:/Users/ARPAN/Work/VibeCoding/cpp-ui-toolkit/build-win/_deps/nanosvg-subbuild/nanosvg-populate-prefix/src/nanosvg-populate-stamp/nanosvg-populate-build.rule
+C:/Users/ARPAN/Work/VibeCoding/cpp-ui-toolkit/build-win/_deps/nanosvg-subbuild/nanosvg-populate-prefix/src/nanosvg-populate-stamp/nanosvg-populate-configure.rule
+C:/Users/ARPAN/Work/VibeCoding/cpp-ui-toolkit/build-win/_deps/nanosvg-subbuild/nanosvg-populate-prefix/src/nanosvg-populate-stamp/nanosvg-populate-download.rule
+C:/Users/ARPAN/Work/VibeCoding/cpp-ui-toolkit/build-win/_deps/nanosvg-subbuild/nanosvg-populate-prefix/src/nanosvg-populate-stamp/nanosvg-populate-install.rule
+C:/Users/ARPAN/Work/VibeCoding/cpp-ui-toolkit/build-win/_deps/nanosvg-subbuild/nanosvg-populate-prefix/src/nanosvg-populate-stamp/nanosvg-populate-mkdir.rule
+C:/Users/ARPAN/Work/VibeCoding/cpp-ui-toolkit/build-win/_deps/nanosvg-subbuild/nanosvg-populate-prefix/src/nanosvg-populate-stamp/nanosvg-populate-patch.rule
+C:/Users/ARPAN/Work/VibeCoding/cpp-ui-toolkit/build-win/_deps/nanosvg-subbuild/nanosvg-populate-prefix/src/nanosvg-populate-stamp/nanosvg-populate-test.rule
+C:/Users/ARPAN/Work/VibeCoding/cpp-ui-toolkit/build-win/_deps/nanosvg-subbuild/nanosvg-populate-prefix/src/nanosvg-populate-stamp/nanosvg-populate-update.rule

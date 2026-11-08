@@ -1,0 +1,3 @@
+C:/Users/ARPAN/Work/VibeCoding/cpp-ui-toolkit/build-win/_deps/nanosvg-subbuild/CMakeFiles/nanosvg-populate.dir
+C:/Users/ARPAN/Work/VibeCoding/cpp-ui-toolkit/build-win/_deps/nanosvg-subbuild/CMakeFiles/edit_cache.dir
+C:/Users/ARPAN/Work/VibeCoding/cpp-ui-toolkit/build-win/_deps/nanosvg-subbuild/CMakeFiles/rebuild_cache.dir
