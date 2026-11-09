@@ -1,0 +1,91 @@
+# Windows build: Skia (cached), every target with MSVC, the test suite, offscreen snapshots,
+# and a smoke test that the examples open a real window and keep running.
+name: windows
+
+on:
+  push:
+    branches: [main, "windows/**", "feature/**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      # Skia takes a long time to build; keep the libraries and the headers we compile against.
+      - name: Restore Skia
+        id: skia
+        uses: actions/cache@v4
+        with:
+          path: |
+            third_party/skia/out/cpu/*.lib
+            third_party/skia/out/cpu/icudtl.dat
+            third_party/skia/out/gpu/*.lib
+            third_party/skia/out/gpu/icudtl.dat
+            third_party/skia/src/include
+            third_party/skia/src/modules
+            third_party/skia/src/src
+          key: skia-win-${{ hashFiles('tools/build_skia.ps1') }}
+
+      - name: Build Skia (cpu, gpu)
+        if: steps.skia.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          ./tools/build_skia.ps1 cpu
+          ./tools/build_skia.ps1 gpu
+
+      - name: Configure
+        shell: pwsh
+        run: cmake -S . -B build-ci -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DUITK_RENDER_GPU=ON
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build build-ci
+
+      - name: Test
+        shell: pwsh
+        run: ctest --test-dir build-ci --output-on-failure
+
+      - name: Snapshots
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force out | Out-Null
+          $b = "build-ci"
+          & "$b/uitk_snapshot_cpu.exe" out/hello_cpu.png
+          & "$b/uitk_snapshot_gpu.exe" out/hello_gpu.png
+          & "$b/workbench_cpu.exe" --snapshot out/workbench.png --dir $PWD
+          & "$b/workbench_cpu.exe" --snapshot out/workbench_dark_menu.png --dark --menu --dir $PWD
+          & "$b/files_cpu.exe" --snapshot out/files.png --dialog
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
+      - name: Window smoke test
+        shell: pwsh
+        run: |
+          $fail = $false
+          foreach ($app in "hello_cpu", "hello_gpu", "workbench_cpu", "workbench_gpu", "files_cpu") {
+            $log = "out/$app.log"
+            $p = Start-Process -FilePath "build-ci/$app.exe" -PassThru -RedirectStandardError $log -RedirectStandardOutput "out/$app.out"
+            Start-Sleep -Seconds 6
+            if ($p.HasExited) {
+              Write-Host "::error::$app exited early with code $($p.ExitCode)"; Get-Content $log; $fail = $true
+            } else {
+              $p.Refresh()
+              Write-Host "$app running: $([math]::Round($p.WorkingSet64 / 1MB)) MB, CPU $($p.TotalProcessorTime)"
+              Stop-Process -Id $p.Id -Force
+            }
+            Get-Content $log -ErrorAction SilentlyContinue
+          }
+          if ($fail) { exit 1 }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-output
+          path: out/

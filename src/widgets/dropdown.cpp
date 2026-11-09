@@ -151,9 +151,9 @@ bool Dropdown::on_key(const KeyEvent& e) {
     if (!e.pressed || !enabled()) return false;
     switch (e.keysym) {
         case kSpace: case key::Return: case kKpEnter: open(); return true;
-        case key::Up:   if (e.mods & MOD_ALT) return false; set_selected(std::max(0, selected_ - 1)); return true;
+        case key::Up:   if (e.mods & mod::Alt) return false; set_selected(std::max(0, selected_ - 1)); return true;
         case key::Down:
-            if (e.mods & MOD_ALT) { open(); return true; }
+            if (e.mods & mod::Alt) { open(); return true; }
             set_selected(std::min((int)items_.size() - 1, selected_ + 1));
             return true;
     }

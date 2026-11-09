@@ -1,4 +1,5 @@
-// Text: skparagraph (HarfBuzz shaping + ICU breaking) over a fontconfig font manager.
+// Text: skparagraph (HarfBuzz shaping + ICU breaking) over the platform font manager
+// (fontconfig + FreeType on Linux, DirectWrite on Windows).
 #include "skia_internal.h"
 
 #include <cstdio>
@@ -9,8 +10,12 @@
 #include <variant>
 
 #include "include/core/SkFontStyle.h"
+#ifdef _WIN32
+#include "include/ports/SkTypeface_win.h"
+#else
 #include "include/ports/SkFontMgr_fontconfig.h"
 #include "include/ports/SkFontScanner_FreeType.h"
+#endif
 #include "include/core/SkBlurTypes.h"
 #include "include/core/SkMaskFilter.h"
 #include "include/core/SkTextBlob.h"
@@ -27,7 +32,11 @@ namespace tl = ::skia::textlayout;
 namespace skglue {
 
 sk_sp<SkFontMgr> font_manager() {
+#ifdef _WIN32
+    static sk_sp<SkFontMgr> mgr = SkFontMgr_New_DirectWrite();
+#else
     static sk_sp<SkFontMgr> mgr = SkFontMgr_New_FontConfig(nullptr, SkFontScanner_Make_FreeType());
+#endif
     return mgr;
 }
 

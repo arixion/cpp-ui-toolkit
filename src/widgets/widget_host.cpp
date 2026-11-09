@@ -482,15 +482,15 @@ bool WidgetHost::handle_event(const Event& ev) {
             close_popup(popups_.back().widget.get());
             return true;
         }
-        if (ke->pressed && ke->keysym == key::Tab && !(ke->mods & (MOD_CTRL | MOD_ALT)))
-            return focus_next(ke->mods & MOD_SHIFT);
+        if (ke->pressed && ke->keysym == key::Tab && !(ke->mods & (mod::Ctrl | mod::Alt)))
+            return focus_next(ke->mods & mod::Shift);
         if (ke->pressed && ke->keysym == 0xfe20 /* ISO_Left_Tab (Shift+Tab) */) return focus_next(true);
         for (Widget* w = focus_; w; w = w->parent())
             if (w->on_key(*ke)) return true;
         if (!ke->pressed) return false;
         // Menu key / Shift+F10: context menu of the focused widget.
         constexpr uint32_t kMenuKey = 0xff67, kF10 = 0xffc7;
-        if (focus_ && (ke->keysym == kMenuKey || (ke->keysym == kF10 && (ke->mods & MOD_SHIFT)))) {
+        if (focus_ && (ke->keysym == kMenuKey || (ke->keysym == kF10 && (ke->mods & mod::Shift)))) {
             Rect a = focus_->keyboard_anchor();
             if (open_context_menu(focus_, focus_->to_window({a.x + 8, a.bottom()}))) return true;
         }

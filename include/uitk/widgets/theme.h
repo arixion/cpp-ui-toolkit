@@ -128,7 +128,7 @@ struct Theme {
     TitleStyle title_style = TitleStyle::CommandCenter;
 
     // ---- typography ----
-    std::vector<std::string> font_families = {"Adwaita Sans", "Inter", "Cantarell", "Noto Sans", "DejaVu Sans", "sans-serif"};
+    std::vector<std::string> font_families = {"Adwaita Sans", "Inter", "Cantarell", "Noto Sans", "DejaVu Sans", "Segoe UI", "sans-serif"};
     float font_size         = 13;
     float font_size_small   = 12;
     float font_size_heading = 26;

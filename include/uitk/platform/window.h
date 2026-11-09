@@ -1,5 +1,7 @@
-// Top-level window. On Linux the backend (Wayland or X11) is chosen at runtime:
-// Wayland if WAYLAND_DISPLAY is set and reachable, else X11. UITK_PLATFORM=x11|wayland overrides.
+// Top-level window.
+//   Linux: the backend (Wayland or X11) is chosen at runtime: Wayland if WAYLAND_DISPLAY is set
+//          and reachable, else X11. UITK_PLATFORM=x11|wayland overrides.
+//   Windows: Win32 with a client-drawn title bar; DWM provides the shadow and rounded corners.
 #pragma once
 #include <cstdint>
 #include <functional>
@@ -33,9 +35,9 @@ enum ResizeEdge : unsigned {
 
 // Handles a GPU renderer needs to create a surface for this window.
 struct NativeSurface {
-    enum class Kind { Wayland, X11 } kind;
-    void*         display = nullptr;   // wl_display* / Display*
-    void*         surface = nullptr;   // wl_surface* (Wayland)
+    enum class Kind { Wayland, X11, Win32 } kind;
+    void*         display = nullptr;   // wl_display* / Display* / HINSTANCE
+    void*         surface = nullptr;   // wl_surface* (Wayland) / HWND (Win32)
     unsigned long window  = 0;         // X11 Window
     unsigned long visual_id = 0;       // X11 VisualID of the window
 };
@@ -63,7 +65,7 @@ public:
     FrameClock& frame_clock() { return frame_clock_; }
 
     // ---- state ----
-    virtual const char* platform_name() const = 0;   // "wayland" / "x11"
+    virtual const char* platform_name() const = 0;   // "wayland" / "x11" / "win32"
     // Size of the window itself (what the user sees as the window), logical px.
     // Event coordinates and the renderer canvas use this rectangle's top-left as origin.
     virtual Size  size() const = 0;
@@ -78,6 +80,9 @@ public:
     // `resize_grip` px next to the window edge. Insets are dropped while maximized/tiled.
     virtual void   set_shadow_insets(Insets insets, float resize_grip) = 0;
     virtual Insets insets() const = 0;               // currently effective (0 when maximized)
+    // True when the system draws the window's shadow and shapes its corners (Windows DWM). The
+    // client then paints an opaque, square-cornered frame and asks for no shadow margin.
+    virtual bool   native_shadow() const { return false; }
 
     Size surface_size() const {
         Insets i = insets();

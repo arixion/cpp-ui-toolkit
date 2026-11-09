@@ -142,7 +142,7 @@ static void test_focus_chain() {
     CHECK(c.has_focus());
     shell.handle_event(keyev(key::Tab, true));
     CHECK(a.has_focus());                                   // wraps around
-    shell.handle_event(keyev(key::Tab, true, MOD_SHIFT));
+    shell.handle_event(keyev(key::Tab, true, mod::Shift));
     CHECK(c.has_focus());
     CHECK(!shell.header_bar().close_button().has_focus());
 

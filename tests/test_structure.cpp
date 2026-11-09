@@ -48,16 +48,16 @@ MenuPopup* top_menu() { return dynamic_cast<MenuPopup*>(g_shell->host().top_popu
 
 static void test_shortcuts() {
     Shortcut s = Shortcut::parse("Ctrl+Shift+P");
-    CHECK(s.keysym == 'p' && s.mods == (MOD_CTRL | MOD_SHIFT));
+    CHECK(s.keysym == 'p' && s.mods == (mod::Ctrl | mod::Shift));
     CHECK(s.text() == "Ctrl+Shift+P");
     CHECK(Shortcut::parse("F5").keysym == key::F1 + 4 && Shortcut::parse("F5").text() == "F5");
     CHECK(Shortcut::parse("Alt+Up").text() == "Alt+Up");
     CHECK(Shortcut::parse("Ctrl++").keysym == '+');
     CHECK(Shortcut::parse("Ctrl+,").text() == "Ctrl+,");
     CHECK(!Shortcut::parse("Hyper+X"));
-    KeyEvent k; k.keysym = 'P'; k.mods = MOD_CTRL | MOD_SHIFT;   // Shift gives the upper-case keysym
+    KeyEvent k; k.keysym = 'P'; k.mods = mod::Ctrl | mod::Shift;   // Shift gives the upper-case keysym
     CHECK(s.matches(k));
-    k.mods = MOD_CTRL;
+    k.mods = mod::Ctrl;
     CHECK(!s.matches(k));
     MenuItem it; it.label = "Save &As && Close";
     CHECK(it.display_label() == "Save As & Close" && it.mnemonic() == 'a' && it.mnemonic_offset() == 5);
@@ -173,10 +173,10 @@ static void test_menu_bar() {
 
     // Shortcuts work application-wide (the focused text field doesn't use Ctrl+S).
     field.grab_focus();
-    press('s', MOD_CTRL);
+    press('s', mod::Ctrl);
     CHECK(saved == 1);
     // Alt+mnemonic opens a menu from the keyboard; Right/Left switch menus.
-    press('e', MOD_ALT);
+    press('e', mod::Alt);
     CHECK(bar.open_index() == 1 && top_menu() && top_menu()->highlighted() == 0);
     press(key::Right);
     CHECK(bar.open_index() == 2);
@@ -201,10 +201,10 @@ static void test_menu_bar() {
     CHECK(bar.open_index() == 0);
     press(key::Escape);
     Dialog::message(shell.host(), MessageKind::Info, "Hi", "");
-    press('s', MOD_CTRL);
+    press('s', mod::Ctrl);
     CHECK(saved == 1);
     press(key::Escape);
-    press('s', MOD_CTRL);
+    press('s', mod::Ctrl);
     CHECK(saved == 2);
 }
 
@@ -298,7 +298,7 @@ static void test_paned() {
     shell.host().focus_next(false);
     press(key::Right);
     CHECK(p.position() == 260);
-    press(key::Left, MOD_SHIFT);
+    press(key::Left, mod::Shift);
     CHECK(p.position() == 210);
     // KeepEnd: the end pane keeps its size when the window grows.
     p.set_resize_policy(PanedResize::KeepEnd);
@@ -495,7 +495,7 @@ static void test_table() {
     // Horizontal scrolling of a wide table (Shift+wheel and keys).
     table.set_columns({{"A", 600}, {"B", 600}});
     relayout();
-    ScrollEvent se; se.pos = center(table); se.dy = 30; se.mods = MOD_SHIFT;
+    ScrollEvent se; se.pos = center(table); se.dy = 30; se.mods = mod::Shift;
     send(se);
     CHECK(table.scroll_x() == 90 && table.column_x(1) == 510);
     table.list().grab_focus();

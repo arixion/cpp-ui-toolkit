@@ -71,7 +71,7 @@ private:
 enum class TextAlign { Left, Center, Right, Justify };
 
 struct TextStyle {
-    std::vector<std::string> families = {"Adwaita Sans", "Cantarell", "Noto Sans", "DejaVu Sans", "sans-serif"};
+    std::vector<std::string> families = {"Adwaita Sans", "Cantarell", "Noto Sans", "DejaVu Sans", "Segoe UI", "sans-serif"};
     float     size = 14;
     int       weight = 400;      // 100..900
     bool      italic = false;

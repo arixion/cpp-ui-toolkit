@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
         if (auto* tf = dynamic_cast<TextField*>(find_first([](Widget* w) { return dynamic_cast<TextField*>(w) != nullptr; }))) {
             tf->grab_focus();
             shell.handle_event(TextEvent{type_text});
-            KeyEvent shift_left; shift_left.keysym = key::Left; shift_left.mods = MOD_SHIFT;
+            KeyEvent shift_left; shift_left.keysym = key::Left; shift_left.mods = mod::Shift;
             for (int k = 0; k < 3; ++k) shell.handle_event(shift_left);   // select the last 3 characters
         }
     }

@@ -15,20 +15,8 @@ set(SKIA_SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party/skia/src" CACHE PATH "Skia 
 set(SKIA_CPU_DIR    "${CMAKE_SOURCE_DIR}/third_party/skia/out/cpu" CACHE PATH "Skia CPU-only build output (tools/build_skia.sh cpu)")
 set(SKIA_GPU_DIR    "${CMAKE_SOURCE_DIR}/third_party/skia/out/gpu" CACHE PATH "Skia GPU build output (tools/build_skia.sh gpu)")
 
-function(uitk_warnings target)
-    target_compile_options(${target} PRIVATE -Wall -Wextra -Wno-missing-field-initializers)
-endfunction()
-
-if(WIN32)
-    # ---- Milestone-0 demo (ported to the library in M6) --------------------------
-    include(FetchContent)
-    FetchContent_Declare(nanosvg GIT_REPOSITORY https://github.com/memononen/nanosvg.git GIT_TAG master)
-    FetchContent_MakeAvailable(nanosvg)
-    add_executable(m0_win WIN32 src/platform/windows/m0_win.cpp)
-    target_link_libraries(m0_win PRIVATE user32 gdi32 dwmapi msimg32 gdiplus)
-    target_include_directories(m0_win PRIVATE ${nanosvg_SOURCE_DIR}/src)
-    return()
-elseif(APPLE)
+if(APPLE)
+    # ---- Milestone-0 demo (macOS port of the library comes after Linux and Windows) ----
     add_executable(m0_mac src/platform/macos/m0_mac.mm)
     find_library(COCOA_LIBRARY Cocoa)
     find_library(QUARTZCORE_LIBRARY QuartzCore)
@@ -36,17 +24,24 @@ elseif(APPLE)
     return()
 endif()
 
-# =============================================================================== Linux
-
-find_package(PkgConfig REQUIRED)
-find_package(X11 REQUIRED)
-pkg_check_modules(WAYLAND REQUIRED IMPORTED_TARGET wayland-client wayland-cursor)
-pkg_check_modules(XKB REQUIRED IMPORTED_TARGET xkbcommon)
-pkg_get_variable(WAYLAND_PROTOCOLS_DIR wayland-protocols pkgdatadir)
-find_program(WAYLAND_SCANNER wayland-scanner REQUIRED)
-if(NOT WAYLAND_PROTOCOLS_DIR)
-    message(FATAL_ERROR "wayland-protocols not found (install wayland-protocols-devel)")
+if(MSVC)
+    # Skia is built against the dynamic release CRT (tools/build_skia.ps1); every configuration
+    # must use the same one, or the link fails on _ITERATOR_DEBUG_LEVEL / RuntimeLibrary.
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+    add_compile_options(/utf-8 /permissive- /Zc:__cplusplus /EHsc /bigobj)
 endif()
+if(WIN32)
+    add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN _CRT_SECURE_NO_WARNINGS)
+endif()
+
+function(uitk_warnings target)
+    if(MSVC)
+        # 4244/4267/4305: float<->int/size_t narrowing, intentional throughout the geometry code.
+        target_compile_options(${target} PRIVATE /W3 /wd4244 /wd4267 /wd4305 /wd4996)
+    else()
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wno-missing-field-initializers)
+    endif()
+endfunction()
 
 set(GEN_DIR "${CMAKE_BINARY_DIR}/generated")
 
@@ -69,7 +64,19 @@ if(NOT _old STREQUAL _adw)
     file(WRITE "${ADW_HEADER}" "${_adw}")
 endif()
 
-# ---- Wayland protocols -----------------------------------------------------------------
+# ---- platform dependencies -------------------------------------------------------------------
+if(NOT WIN32)
+find_package(PkgConfig REQUIRED)
+find_package(X11 REQUIRED)
+pkg_check_modules(WAYLAND REQUIRED IMPORTED_TARGET wayland-client wayland-cursor)
+pkg_check_modules(XKB REQUIRED IMPORTED_TARGET xkbcommon)
+pkg_get_variable(WAYLAND_PROTOCOLS_DIR wayland-protocols pkgdatadir)
+find_program(WAYLAND_SCANNER wayland-scanner REQUIRED)
+if(NOT WAYLAND_PROTOCOLS_DIR)
+    message(FATAL_ERROR "wayland-protocols not found (install wayland-protocols-devel)")
+endif()
+
+# Wayland protocols
 set(WL_PROTO_SRCS "")
 foreach(_proto
         "stable/xdg-shell/xdg-shell.xml"
@@ -82,20 +89,30 @@ foreach(_proto
     add_custom_command(OUTPUT "${_src}" COMMAND ${WAYLAND_SCANNER} private-code "${_xml}" "${_src}" DEPENDS "${_xml}" VERBATIM)
     list(APPEND WL_PROTO_SRCS "${_hdr}" "${_src}")
 endforeach()
+endif()
 
 # ---- uitk_core ---------------------------------------------------------------------------
-add_library(uitk_core STATIC src/core/application.cpp src/core/perf.cpp src/core/animation.cpp src/core/bezier.cpp src/core/format.cpp)
+add_library(uitk_core STATIC src/core/application.cpp src/core/perf.cpp src/core/animation.cpp
+                             src/core/bezier.cpp src/core/format.cpp src/core/paths.cpp)
 target_include_directories(uitk_core PUBLIC include)
+if(WIN32)
+    target_link_libraries(uitk_core PRIVATE psapi)
+endif()
 uitk_warnings(uitk_core)
 
 # ---- uitk_platform -------------------------------------------------------------------------
-add_library(uitk_platform STATIC
-    src/platform/linux/window_linux.cpp
-    src/platform/linux/wayland/wayland_window.cpp
-    src/platform/linux/x11/x11_window.cpp
-    ${WL_PROTO_SRCS})
-target_include_directories(uitk_platform PRIVATE ${GEN_DIR})
-target_link_libraries(uitk_platform PUBLIC uitk_core PRIVATE PkgConfig::WAYLAND PkgConfig::XKB X11::X11 X11::Xext)
+if(WIN32)
+    add_library(uitk_platform STATIC src/platform/windows/win32_window.cpp)
+    target_link_libraries(uitk_platform PUBLIC uitk_core PRIVATE user32 gdi32 dwmapi)
+else()
+    add_library(uitk_platform STATIC
+        src/platform/linux/window_linux.cpp
+        src/platform/linux/wayland/wayland_window.cpp
+        src/platform/linux/x11/x11_window.cpp
+        ${WL_PROTO_SRCS})
+    target_include_directories(uitk_platform PRIVATE ${GEN_DIR})
+    target_link_libraries(uitk_platform PUBLIC uitk_core PRIVATE PkgConfig::WAYLAND PkgConfig::XKB X11::X11 X11::Xext)
+endif()
 uitk_warnings(uitk_platform)
 
 # ---- uitk_widgets (painting resolves against whichever render backend the app links) -------
@@ -141,29 +158,65 @@ target_link_libraries(uitk_widgets PUBLIC uitk_platform)
 uitk_warnings(uitk_widgets)
 
 # ---- Skia --------------------------------------------------------------------------------------
-pkg_check_modules(SKIA_SYS REQUIRED IMPORTED_TARGET
-    freetype2 fontconfig harfbuzz icu-uc icu-i18n libpng libjpeg libwebp libwebpdemux libwebpmux zlib expat)
-
 # Creates an INTERFACE target for one Skia build output directory.
-function(uitk_add_skia target dir)
-    set(_order svg skparagraph skshaper skunicode_icu skunicode_core skresources skia skcms wuffs
-               allocator_shim allocator_core allocator_base raw_ptr)
-    set(_libs "")
-    foreach(_l ${_order})
-        if(EXISTS "${dir}/lib${_l}.a")
-            list(APPEND _libs "${dir}/lib${_l}.a")
+if(WIN32)
+    function(uitk_add_skia target dir)
+        if(NOT EXISTS "${dir}/skia.lib" OR NOT EXISTS "${SKIA_SOURCE_DIR}/include/core/SkCanvas.h")
+            message(FATAL_ERROR "Skia not found in ${dir}. Run: tools\\build_skia.ps1 <cpu|gpu>")
         endif()
-    endforeach()
-    if(NOT EXISTS "${dir}/libskia.a" OR NOT EXISTS "${SKIA_SOURCE_DIR}/include/core/SkCanvas.h")
-        message(FATAL_ERROR "Skia not found in ${dir}. Run: tools/build_skia.sh <cpu|gpu>")
+        # Bundled third-party code (HarfBuzz, ICU, libpng, ...) is in separate .libs; take them all.
+        file(GLOB _libs "${dir}/*.lib")
+        add_library(${target} INTERFACE)
+        target_include_directories(${target} SYSTEM INTERFACE "${SKIA_SOURCE_DIR}")
+        target_compile_definitions(${target} INTERFACE
+            SK_XML SK_TYPEFACE_FACTORY_DIRECTWRITE SK_FONTMGR_DIRECTWRITE_AVAILABLE
+            SK_SHAPER_HARFBUZZ_AVAILABLE SK_SHAPER_UNICODE_AVAILABLE SK_UNICODE_AVAILABLE
+            SK_UNICODE_ICU_IMPLEMENTATION SK_ENABLE_SVG SK_ENABLE_PARAGRAPH)
+        target_link_libraries(${target} INTERFACE ${_libs} user32 gdi32 ole32 oleaut32 advapi32 dwrite windowscodecs)
+        set_property(TARGET ${target} PROPERTY UITK_ICU_DATA "${dir}/icudtl.dat")
+    endfunction()
+else()
+    pkg_check_modules(SKIA_SYS REQUIRED IMPORTED_TARGET
+        freetype2 fontconfig harfbuzz icu-uc icu-i18n libpng libjpeg libwebp libwebpdemux libwebpmux zlib expat)
+    function(uitk_add_skia target dir)
+        set(_order svg skparagraph skshaper skunicode_icu skunicode_core skresources skia skcms wuffs
+                   allocator_shim allocator_core allocator_base raw_ptr)
+        set(_libs "")
+        foreach(_l ${_order})
+            if(EXISTS "${dir}/lib${_l}.a")
+                list(APPEND _libs "${dir}/lib${_l}.a")
+            endif()
+        endforeach()
+        if(NOT EXISTS "${dir}/libskia.a" OR NOT EXISTS "${SKIA_SOURCE_DIR}/include/core/SkCanvas.h")
+            message(FATAL_ERROR "Skia not found in ${dir}. Run: tools/build_skia.sh <cpu|gpu>")
+        endif()
+        add_library(${target} INTERFACE)
+        target_include_directories(${target} SYSTEM INTERFACE "${SKIA_SOURCE_DIR}")
+        target_compile_definitions(${target} INTERFACE
+            SK_R32_SHIFT=16 SK_XML SK_TYPEFACE_FACTORY_FREETYPE SK_FONTMGR_FONTCONFIG_AVAILABLE
+            SK_SHAPER_HARFBUZZ_AVAILABLE SK_SHAPER_UNICODE_AVAILABLE SK_UNICODE_AVAILABLE
+            SK_UNICODE_ICU_IMPLEMENTATION SK_ENABLE_SVG SK_ENABLE_PARAGRAPH)
+        target_link_libraries(${target} INTERFACE "$<LINK_GROUP:RESCAN,${_libs}>" PkgConfig::SKIA_SYS dl pthread)
+    endfunction()
+endif()
+
+# Windows: ICU loads its data file from the executable's directory at startup.
+function(uitk_runtime_files target)
+    if(WIN32)
+        set(_icu "")
+        foreach(_d "${SKIA_CPU_DIR}" "${SKIA_GPU_DIR}")
+            if(NOT _icu AND EXISTS "${_d}/icudtl.dat")
+                set(_icu "${_d}/icudtl.dat")
+            endif()
+        endforeach()
+        if(_icu)
+            add_custom_command(TARGET ${target} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_icu}" "$<TARGET_FILE_DIR:${target}>/icudtl.dat"
+                VERBATIM)
+        endif()
+        # Per-monitor DPI awareness and UTF-8 as the process code page (argv, fopen, ...).
+        target_sources(${target} PRIVATE "${CMAKE_SOURCE_DIR}/src/platform/windows/uitk.manifest")
     endif()
-    add_library(${target} INTERFACE)
-    target_include_directories(${target} SYSTEM INTERFACE "${SKIA_SOURCE_DIR}")
-    target_compile_definitions(${target} INTERFACE
-        SK_R32_SHIFT=16 SK_XML SK_TYPEFACE_FACTORY_FREETYPE SK_FONTMGR_FONTCONFIG_AVAILABLE
-        SK_SHAPER_HARFBUZZ_AVAILABLE SK_SHAPER_UNICODE_AVAILABLE SK_UNICODE_AVAILABLE
-        SK_UNICODE_ICU_IMPLEMENTATION SK_ENABLE_SVG SK_ENABLE_PARAGRAPH)
-    target_link_libraries(${target} INTERFACE "$<LINK_GROUP:RESCAN,${_libs}>" PkgConfig::SKIA_SYS dl pthread)
 endfunction()
 
 set(UITK_SKIA_GLUE
@@ -182,11 +235,16 @@ if(UITK_RENDER_CPU)
 endif()
 
 if(UITK_RENDER_GPU)
-    pkg_check_modules(GLES REQUIRED IMPORTED_TARGET egl glesv2 wayland-egl)
     uitk_add_skia(skia_gpu "${SKIA_GPU_DIR}")
     target_compile_definitions(skia_gpu INTERFACE SK_GANESH SK_GL)
-    add_library(uitk_render_gpu STATIC ${UITK_SKIA_GLUE} src/render/gpu/backend_gpu.cpp)
-    target_link_libraries(uitk_render_gpu PUBLIC uitk_platform PRIVATE skia_gpu PkgConfig::GLES)
+    if(WIN32)
+        add_library(uitk_render_gpu STATIC ${UITK_SKIA_GLUE} src/render/gpu/backend_gpu.cpp src/render/gpu/wgl_context.cpp)
+        target_link_libraries(uitk_render_gpu PUBLIC uitk_platform PRIVATE skia_gpu opengl32 gdi32 user32)
+    else()
+        pkg_check_modules(GLES REQUIRED IMPORTED_TARGET egl glesv2 wayland-egl)
+        add_library(uitk_render_gpu STATIC ${UITK_SKIA_GLUE} src/render/gpu/backend_gpu.cpp src/render/gpu/egl_context.cpp)
+        target_link_libraries(uitk_render_gpu PUBLIC uitk_platform PRIVATE skia_gpu PkgConfig::GLES)
+    endif()
     uitk_warnings(uitk_render_gpu)
     list(APPEND UITK_BACKENDS gpu)
 endif()
@@ -202,14 +260,17 @@ foreach(_b ${UITK_BACKENDS})
             UITK_HELLO_DIR="${CMAKE_SOURCE_DIR}/examples/hello")
         target_link_libraries(hello_${_b} PRIVATE uitk_widgets uitk_render_${_b})
         uitk_warnings(hello_${_b})
+        uitk_runtime_files(hello_${_b})
 
         add_executable(files_${_b} examples/files/main.cpp)
         target_link_libraries(files_${_b} PRIVATE uitk_widgets uitk_render_${_b})
         uitk_warnings(files_${_b})
+        uitk_runtime_files(files_${_b})
 
         add_executable(workbench_${_b} examples/workbench/main.cpp)
         target_link_libraries(workbench_${_b} PRIVATE uitk_widgets uitk_render_${_b})
         uitk_warnings(workbench_${_b})
+        uitk_runtime_files(workbench_${_b})
     endif()
 
     add_executable(uitk_snapshot_${_b} tools/uitk_snapshot.cpp examples/hello/demo.cpp)
@@ -218,6 +279,7 @@ foreach(_b ${UITK_BACKENDS})
         UITK_HELLO_DIR="${CMAKE_SOURCE_DIR}/examples/hello")
     target_link_libraries(uitk_snapshot_${_b} PRIVATE uitk_widgets uitk_render_${_b})
     uitk_warnings(uitk_snapshot_${_b})
+    uitk_runtime_files(uitk_snapshot_${_b})
 endforeach()
 
 if(UITK_BUILD_TESTS)
@@ -225,10 +287,12 @@ if(UITK_BUILD_TESTS)
     add_executable(test_core tests/test_core.cpp)
     target_link_libraries(test_core PRIVATE uitk_core)
     uitk_warnings(test_core)
+    uitk_runtime_files(test_core)
     add_test(NAME core COMMAND test_core)
     add_executable(test_animation tests/test_animation.cpp)
     target_link_libraries(test_animation PRIVATE uitk_core)
     uitk_warnings(test_animation)
+    uitk_runtime_files(test_animation)
     add_test(NAME animation COMMAND test_animation)
     foreach(_b ${UITK_BACKENDS})
         add_test(NAME snapshot_${_b} COMMAND uitk_snapshot_${_b} "${CMAKE_BINARY_DIR}/snapshot_${_b}.png")
@@ -238,18 +302,22 @@ if(UITK_BUILD_TESTS)
         target_link_libraries(test_widgets PRIVATE uitk_widgets uitk_render_cpu)
         target_compile_definitions(test_widgets PRIVATE)
         uitk_warnings(test_widgets)
+        uitk_runtime_files(test_widgets)
         add_test(NAME widgets COMMAND test_widgets)
         add_executable(test_controls tests/test_controls.cpp)
         target_link_libraries(test_controls PRIVATE uitk_widgets uitk_render_cpu)
         uitk_warnings(test_controls)
+        uitk_runtime_files(test_controls)
         add_test(NAME controls COMMAND test_controls)
         add_executable(test_files tests/test_files.cpp)
         target_link_libraries(test_files PRIVATE uitk_widgets uitk_render_cpu)
         uitk_warnings(test_files)
+        uitk_runtime_files(test_files)
         add_test(NAME files COMMAND test_files)
         add_executable(test_structure tests/test_structure.cpp)
         target_link_libraries(test_structure PRIVATE uitk_widgets uitk_render_cpu)
         uitk_warnings(test_structure)
+        uitk_runtime_files(test_structure)
         add_test(NAME structure COMMAND test_structure)
     endif()
 endif()

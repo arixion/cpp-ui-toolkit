@@ -87,7 +87,7 @@ public:
 
     bool row_pressed(size_t i, Point p, const PointerEvent& e) override {
         TreeNode& n = *view_.rows_[i];
-        if (!n.has_children() || e.click_count != 1 || (e.mods & (MOD_CTRL | MOD_SHIFT))) return false;
+        if (!n.has_children() || e.click_count != 1 || (e.mods & (mod::Ctrl | mod::Shift))) return false;
         float cx = view_.chevron_x(n.depth());
         bool on_chevron = p.x >= cx - 4 && p.x < cx + 20;
         // Toggling changes only the rows below this one, so the view can still select row i.
@@ -220,7 +220,7 @@ void TreeView::activate_row(size_t r) {
 }
 
 bool TreeView::on_key(const KeyEvent& e) {
-    if (!e.pressed || e.mods & (MOD_ALT | MOD_CTRL)) return false;
+    if (!e.pressed || e.mods & (mod::Alt | mod::Ctrl)) return false;
     TreeNode* n = current_node();
     if (!n) return false;
     if (e.keysym == key::Right) {

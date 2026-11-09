@@ -38,7 +38,7 @@ class WaylandDisplay final : public EventSource {
 public:
     static WaylandDisplay* get(Application& app);   // connects lazily; null if no compositor
 
-    int  fd() const override { return wl_display_get_fd(display); }
+    Handle handle() const override { return wl_display_get_fd(display); }
     void prepare() override;
     void dispatch(short revents) override;
 
@@ -72,7 +72,7 @@ public:
     xkb_context* xkb_ctx = nullptr;
     xkb_keymap*  xkb_keymap_ = nullptr;
     xkb_state*   xkb_state_ = nullptr;
-    uint32_t mods = MOD_NONE;
+    uint32_t mods = mod::NoModifier;
     int32_t  repeat_rate = 25, repeat_delay = 600;
     uint32_t repeat_key = 0;
     TimerId  repeat_timer = 0;
@@ -571,7 +571,7 @@ void WaylandDisplay::emit_key(uint32_t key, bool pressed, bool repeat) {
     char buf[64];
     int n = xkb_state_key_get_utf8(xkb_state_, code, buf, sizeof buf);
     // Skip control characters (Ctrl+X, Escape, Backspace...): those arrive as KeyEvents.
-    if (n > 0 && (unsigned char)buf[0] >= 0x20 && buf[0] != 0x7f && !(mods & (MOD_CTRL | MOD_SUPER)))
+    if (n > 0 && (unsigned char)buf[0] >= 0x20 && buf[0] != 0x7f && !(mods & (mod::Ctrl | mod::Super)))
         keyboard_focus->emit(TextEvent{std::string(buf, (size_t)n)});
 }
 
@@ -622,8 +622,8 @@ const wl_keyboard_listener keyboard_listener = {
         auto active = [d](const char* name) {
             return xkb_state_mod_name_is_active(d->xkb_state_, name, XKB_STATE_MODS_EFFECTIVE) > 0;
         };
-        d->mods = (active(XKB_MOD_NAME_SHIFT) ? MOD_SHIFT : 0) | (active(XKB_MOD_NAME_CTRL) ? MOD_CTRL : 0) |
-                  (active(XKB_MOD_NAME_ALT) ? MOD_ALT : 0)     | (active(XKB_MOD_NAME_LOGO) ? MOD_SUPER : 0);
+        d->mods = (active(XKB_MOD_NAME_SHIFT) ? mod::Shift : 0) | (active(XKB_MOD_NAME_CTRL) ? mod::Ctrl : 0) |
+                  (active(XKB_MOD_NAME_ALT) ? mod::Alt : 0)     | (active(XKB_MOD_NAME_LOGO) ? mod::Super : 0);
     },
     .repeat_info = [](void* data, wl_keyboard*, int32_t rate, int32_t delay) {
         auto* d = static_cast<WaylandDisplay*>(data);

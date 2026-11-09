@@ -7,6 +7,7 @@ namespace uitk {
 WindowFrame::WindowFrame(Window* window) : window_(window) { set_shadow(true); }
 
 void WindowFrame::set_shadow(bool on) {
+    if (window_ && window_->native_shadow()) on = false;   // the system draws it
     shadow_ = on;
     if (window_) window_->set_shadow_insets(on ? shadow_insets() : Insets{}, on ? RESIZE_GRIP : 0);
 }
@@ -20,7 +21,8 @@ unsigned WindowFrame::resize_edges(Point p, Size s, const Theme& theme) const {
     if ((top || bottom) && p.x >= s.width - corner) right = true;
     if ((left || right) && p.y < corner) top = true;
     if ((left || right) && p.y >= s.height - corner) bottom = true;
-    return (top ? EDGE_TOP : 0) | (bottom ? EDGE_BOTTOM : 0) | (left ? EDGE_LEFT : 0) | (right ? EDGE_RIGHT : 0);
+    return (top ? (unsigned)EDGE_TOP : 0u) | (bottom ? (unsigned)EDGE_BOTTOM : 0u) |
+           (left ? (unsigned)EDGE_LEFT : 0u) | (right ? (unsigned)EDGE_RIGHT : 0u);
 }
 
 MouseCursor WindowFrame::cursor_for_edges(unsigned e) {
@@ -52,7 +54,8 @@ void WindowFrame::begin(Canvas& c, Size s, const Theme& th, float active) {
         c.draw_shadow(frame, r, sh.with_alpha(26), 1.f, {0, 1}, 0, M::Hollow, 1 - active);
     }
     c.save();
-    if (!maximized_) c.clip_rrect(frame, th.window_radius);   // anti-aliased rounded frame
+    // Anti-aliased rounded frame, unless the system rounds the corners itself.
+    if (!maximized_ && !(window_ && window_->native_shadow())) c.clip_rrect(frame, th.window_radius);
     c.draw_rect(frame, Paint::fill(th.window_bg));
 }
 

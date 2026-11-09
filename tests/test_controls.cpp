@@ -112,17 +112,17 @@ static void test_text_field() {
     CHECK(tf.has_focus());
     type("hello world");
     CHECK(tf.text() == "hello world" && last == "hello world");
-    press(key::BackSpace, MOD_CTRL);          // delete the previous word
+    press(key::BackSpace, mod::Ctrl);          // delete the previous word
     CHECK(tf.text() == "hello ");
     type("नमस्ते");                          // multi-byte UTF-8
     press(key::BackSpace);                    // one code point
     CHECK(tf.text().size() == std::string("hello नमस्त").size());
     press(key::Home);
-    press(key::Right, MOD_SHIFT); press(key::Right, MOD_SHIFT);
+    press(key::Right, mod::Shift); press(key::Right, mod::Shift);
     CHECK(tf.selected_text() == "he");
     type("J");                              // typing replaces the selection
     CHECK(tf.text().rfind("Jllo ", 0) == 0);
-    press(key::letter('a'), MOD_CTRL);
+    press(key::letter('a'), mod::Ctrl);
     CHECK(tf.selected_text() == tf.text());
     press(key::Delete);
     CHECK(tf.text().empty());

@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 
+#include "uitk/core/paths.h"
 #include "uitk/core/application.h"
 #include "uitk/core/format.h"
 #include "uitk/render/renderer.h"
@@ -60,7 +61,7 @@ struct FileRow {
 
 std::string type_of(const FileRow& r) {
     if (r.dir) return "Folder";
-    std::string ext = r.path.extension().string();
+    std::string ext = paths::to_utf8(r.path.extension());
     if (ext.size() < 2) return "File";
     std::string e = ext.substr(1);
     for (auto& c : e) c = (char)std::toupper((unsigned char)c);
@@ -76,7 +77,7 @@ public:
              !ec && it != fs::directory_iterator(); it.increment(ec)) {
             FileRow r;
             r.path = it->path();
-            r.name = r.path.filename().string();
+            r.name = paths::to_utf8(r.path.filename());
             if (!r.name.empty() && r.name[0] == '.') continue;
             std::error_code e2;
             r.dir = it->is_directory(e2);
@@ -155,19 +156,19 @@ void load_children(TreeNode& n) {
     std::error_code ec;
     for (auto it = fs::directory_iterator(dir, fs::directory_options::skip_permission_denied, ec);
          !ec && it != fs::directory_iterator() && entries.size() < 5000; it.increment(ec)) {
-        std::string name = it->path().filename().string();
+        std::string name = paths::to_utf8(it->path().filename());
         if (!name.empty() && name[0] != '.') entries.push_back(*it);
     }
     std::sort(entries.begin(), entries.end(), [](const fs::directory_entry& a, const fs::directory_entry& b) {
         std::error_code e;
         bool da = a.is_directory(e), db = b.is_directory(e);
         if (da != db) return da;
-        return lower(a.path().filename().string()) < lower(b.path().filename().string());
+        return lower(paths::to_utf8(a.path().filename())) < lower(paths::to_utf8(b.path().filename()));
     });
     for (auto& e : entries) {
         std::error_code e2;
         bool d = e.is_directory(e2);
-        TreeNode& c = n.add(e.path().filename().string(), icons::for_file(e.path(), d));
+        TreeNode& c = n.add(paths::to_utf8(e.path().filename()), icons::for_file(e.path(), d));
         c.data = e.path();
         c.set_lazy(d);
     }
@@ -196,7 +197,7 @@ struct Workbench {
 
     void open_root(const fs::path& dir) {
         tree->root().clear();
-        TreeNode& r = tree->root().add(dir.filename().empty() ? dir.string() : dir.filename().string(), icons::symbolic("folder"));
+        TreeNode& r = tree->root().add(dir.filename().empty() ? paths::to_utf8(dir) : paths::to_utf8(dir.filename()), icons::symbolic("folder"));
         r.data = dir;
         r.set_lazy(true);
         tree->refresh();
@@ -207,8 +208,8 @@ struct Workbench {
     void show_folder(const fs::path& dir) {
         folder = dir;
         model.load(dir);
-        folder_title->set_text(dir.filename().empty() ? dir.string() : dir.filename().string());
-        status_path->set_label(dir.string());
+        folder_title->set_text(dir.filename().empty() ? paths::to_utf8(dir) : paths::to_utf8(dir.filename()));
+        status_path->set_label(paths::to_utf8(dir));
         update_count();
     }
     void update_count() {
@@ -251,7 +252,7 @@ struct Workbench {
             TreeNode* parent = dir ? n : n->parent();
             ask_name("New File", "Create", "untitled.txt", [this, parent](const std::string& name) {
                 TreeNode& c = parent->add(name, icons::for_file(name, false));
-                c.data = node_path(*parent) / name;
+                c.data = node_path(*parent) / paths::from_utf8(name);
                 tree->expand(*parent);
                 tree->refresh();
                 tree->select(c);
@@ -267,7 +268,7 @@ struct Workbench {
             });
         }, Shortcut::parse("F2")).set_icon(icons::symbolic("document-edit"));
         m->add_separator();
-        m->add("Copy &Path", [this, p] { status("Path: " + p.string()); }, Shortcut::parse("Ctrl+Shift+C"))
+        m->add("Copy &Path", [this, p] { status("Path: " + paths::to_utf8(p)); }, Shortcut::parse("Ctrl+Shift+C"))
             .set_icon(icons::symbolic("edit-copy"));
         if (n->parent() && n->parent() != &tree->root()) {
             m->add_separator();
@@ -301,7 +302,9 @@ struct Workbench {
         Menu& recent = file.add_submenu("Open &Recent");
         for (const char* d : {"/usr/share/icons", "/etc", "/usr/include"})
             if (fs::is_directory(d)) recent.add(d, [this, p = fs::path(d)] { open_root(p); });
-        if (const char* home = getenv("HOME")) recent.add("~ (home)", [this, p = fs::path(home)] { open_root(p); });
+        for (const fs::path& r : paths::roots())   // "/" on Linux, the drives on Windows
+            if (r != "/") recent.add(paths::to_utf8(r), [this, r] { open_root(r); });
+        recent.add("~ (home)", [this] { open_root(paths::home_directory()); });
         file.add_separator();
         file.add("E&xit", [this] { if (quit) quit(); }, Shortcut::parse("Ctrl+Q"));
 
@@ -369,7 +372,7 @@ struct Workbench {
             fs::path p = node_path(*n);
             std::error_code ec;
             if (fs::is_directory(p, ec)) show_folder(p);
-            else status(p.string());
+            else status(paths::to_utf8(p));
         });
         tree->set_context_menu_provider([this](TreeNode* n) { return node_menu(n); });
         collapse.clicked.connect([this] { tree->collapse_all(); });
@@ -406,7 +409,7 @@ struct Workbench {
         table->selection_changed.connect([this] { update_count(); });
         table->activated.connect([this](size_t r) {
             const FileRow& f = model.row(r);
-            if (f.dir) show_folder(f.path); else status("Opened " + f.path.string() + " (demo)");
+            if (f.dir) show_folder(f.path); else status("Opened " + paths::to_utf8(f.path) + " (demo)");
         });
         auto row_menu = std::make_shared<Menu>();
         row_menu->add("Copy &Name", [this] {
@@ -425,7 +428,7 @@ struct Workbench {
                 if (!n || part == "." || part.empty()) break;
                 if (n->lazy()) load_children(*n);
                 TreeNode* next = nullptr;
-                for (auto& ch : n->children()) if (ch->text == part.string()) { next = ch.get(); break; }
+                for (auto& ch : n->children()) if (ch->text == paths::to_utf8(part)) { next = ch.get(); break; }
                 n = next;
             }
             if (n) { tree->select(*n); tree->list().grab_focus(); }
@@ -506,7 +509,7 @@ int main(int argc, char** argv) {
         else if (!strcmp(argv[i], "--menu")) menu = true;
         else if (!strcmp(argv[i], "--context")) context = true;
         else if (!strcmp(argv[i], "--dialog")) dialog = true;
-        else if (!strcmp(argv[i], "--dir") && i + 1 < argc) dir = argv[++i];
+        else if (!strcmp(argv[i], "--dir") && i + 1 < argc) dir = paths::from_utf8(argv[++i]);
         else if (!strcmp(argv[i], "--size") && i + 1 < argc) {
             int w, h; if (sscanf(argv[++i], "%dx%d", &w, &h) == 2) size = {(float)w, (float)h};
         }

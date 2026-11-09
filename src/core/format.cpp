@@ -19,20 +19,30 @@ std::string format_bytes(uint64_t bytes) {
     return buf;
 }
 
+namespace {
+std::tm local_tm(std::time_t t) {
+    std::tm r{};
+#ifdef _WIN32
+    localtime_s(&r, &t);
+#else
+    localtime_r(&t, &r);
+#endif
+    return r;
+}
+} // namespace
+
 std::string format_date(std::chrono::system_clock::time_point t, std::chrono::system_clock::time_point now) {
-    std::time_t tt = std::chrono::system_clock::to_time_t(t), nt = std::chrono::system_clock::to_time_t(now);
-    std::tm a{}, b{};
-    localtime_r(&tt, &a);
-    localtime_r(&nt, &b);
+    std::tm a = local_tm(std::chrono::system_clock::to_time_t(t));
+    std::tm b = local_tm(std::chrono::system_clock::to_time_t(now));
     char buf[32];
-    if (a.tm_year == b.tm_year && a.tm_yday == b.tm_yday) strftime(buf, sizeof buf, "%H:%M", &a);
-    else if (a.tm_year == b.tm_year && a.tm_yday == b.tm_yday - 1) return "Yesterday";
-    else if (a.tm_year == b.tm_year) strftime(buf, sizeof buf, "%b %e", &a);
-    else strftime(buf, sizeof buf, "%b %e %Y", &a);
-    std::string s = buf;
-    // %e pads single-digit days with a space: "Nov  9" -> "Nov 9".
-    for (size_t p; (p = s.find("  ")) != std::string::npos;) s.erase(p, 1);
-    return s;
+    if (a.tm_year == b.tm_year && a.tm_yday == b.tm_yday) { strftime(buf, sizeof buf, "%H:%M", &a); return buf; }
+    if (a.tm_year == b.tm_year && a.tm_yday == b.tm_yday - 1) return "Yesterday";
+    // "Nov 9" / "Nov 9 2025" (%e is not portable; MSVC aborts on it).
+    char mon[16];
+    strftime(mon, sizeof mon, "%b", &a);
+    if (a.tm_year == b.tm_year) snprintf(buf, sizeof buf, "%s %d", mon, a.tm_mday);
+    else snprintf(buf, sizeof buf, "%s %d %d", mon, a.tm_mday, a.tm_year + 1900);
+    return buf;
 }
 
 } // namespace uitk

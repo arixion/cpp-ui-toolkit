@@ -12,6 +12,7 @@
 #include <memory>
 #include <string>
 
+#include "uitk/core/paths.h"
 #include "uitk/core/application.h"
 #include "uitk/render/renderer.h"
 #include "uitk/widgets/application_window.h"
@@ -88,8 +89,8 @@ Ui build_ui(WindowShell& shell, const fs::path& start_dir) {
     StatusBar& bar = shell.content().add<StatusBar>();
     ui.status = &bar.add_start("", icons::symbolic("folder"));
     bar.add_end("Double-click a file to add it · Alt+↑ parent · Ctrl+L path");
-    br->directory_changed.connect([s = ui.status](const fs::path& d) { s->set_label(d.string()); });
-    ui.status->set_label(br->directory().string());
+    br->directory_changed.connect([s = ui.status](const fs::path& d) { s->set_label(paths::to_utf8(d)); });
+    ui.status->set_label(paths::to_utf8(br->directory()));
     return ui;
 }
 
@@ -140,7 +141,7 @@ int snapshot(const char* out, bool dark, bool dialog, bool uploads, Size size, c
         FileDialog& d = FileDialog::open(shell.host(), "Choose files to upload", fo, nullptr);
         if (d.browser().entries().size() > 3) {
             d.browser().list().select_only(2);
-            KeyEvent k; k.keysym = key::Down; k.mods = MOD_SHIFT; k.pressed = true;
+            KeyEvent k; k.keysym = key::Down; k.mods = mod::Shift; k.pressed = true;
             shell.handle_event(k);   // extend the selection with Shift+Down
         }
         shell.host().layout(size);
@@ -168,7 +169,7 @@ int main(int argc, char** argv) {
         else if (!strcmp(argv[i], "--dark")) dark = true;
         else if (!strcmp(argv[i], "--dialog")) dialog = true;
         else if (!strcmp(argv[i], "--uploads")) uploads = true;
-        else if (!strcmp(argv[i], "--dir") && i + 1 < argc) dir = argv[++i];
+        else if (!strcmp(argv[i], "--dir") && i + 1 < argc) dir = paths::from_utf8(argv[++i]);
         else if (!strcmp(argv[i], "--size") && i + 1 < argc) {
             int w, h; if (sscanf(argv[++i], "%dx%d", &w, &h) == 2) size = {(float)w, (float)h};
         }

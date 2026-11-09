@@ -44,7 +44,7 @@ public:
     }
     bool on_key(const KeyEvent& e) override {
         if (!e.pressed) return false;
-        float step = (e.mods & MOD_SHIFT) ? 50.f : 10.f;
+        float step = (e.mods & mod::Shift) ? 50.f : 10.f;
         bool h = owner_.orientation_ == Orientation::Horizontal;
         uint32_t less = h ? key::Left : key::Up, more = h ? key::Right : key::Down;
         if (e.keysym == less) { owner_.drag_to(owner_.position_ - step); return true; }

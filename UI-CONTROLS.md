@@ -91,8 +91,11 @@ Not part of the basic gallery. Some already exist in the library.
 | ✅ | Animation | `core/animation.h` | Easing (CSS bezier), transitions, springs, loops; frames only while animating |
 | ✅ | Modal popups | `PopupOptions` | Modal + centred popups, scrim, input blocked below, Tab scoped to the modal |
 | ✅ | Helpers | `core/format.h`, `icons::for_file`, `Paint::dashed` | Byte sizes / dates, file-type icons, dashed strokes |
-| ⬜ | Clipboard | platform | Wayland `wl_data_device`, X11 selections; enables copy/paste in text fields |
-| ⬜ | IME / pre-edit | platform | `zwp_text_input_v3`, XIM pre-edit |
+| ✅ | Platform: Linux | `src/platform/linux` | Wayland + X11, picked at runtime; client-side shadow |
+| 🟡 | Platform: Windows | `src/platform/windows` | Win32, DWM shadow + rounded corners, snap, per-monitor DPI v2, UTF-8 text, WGL GPU backend, DirectWrite fonts. Compile-checked from Linux (mingw) and built/tested by CI (`.github/workflows/windows.yml`); not yet tried by hand. **Gaps:** clipboard, IME candidate window placement, Windows 11 snap-layout flyout on the maximize button |
+| ⬜ | Platform: macOS | | |
+| ⬜ | Clipboard | platform | Wayland `wl_data_device`, X11 selections, Win32 clipboard; enables copy/paste in text fields |
+| ⬜ | IME / pre-edit | platform | `zwp_text_input_v3`, XIM pre-edit, IMM32/TSF composition |
 | ⬜ | Accessibility | platform | AT-SPI tree |
 | ⬜ | Drag and drop | platform | |
 | ⬜ | Partial redraw | render | Repaint only damaged regions |

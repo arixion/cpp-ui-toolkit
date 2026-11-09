@@ -5,6 +5,7 @@
 
 #include "uitk/core/application.h"
 #include "uitk/core/format.h"
+#include "uitk/core/paths.h"
 #include "uitk/widgets/glyphs.h"
 #include "uitk/widgets/icon.h"
 #include "uitk/widgets/icons.h"
@@ -107,7 +108,7 @@ size_t FileUpload::add_files(const std::vector<fs::path>& paths) {
     size_t added = 0;
     if (!opts_.multiple && !paths.empty()) { files_.clear(); }
     for (const fs::path& p : paths) {
-        std::string name = p.filename().string();
+        std::string name = paths::to_utf8(p.filename());
         if (std::find(files_.begin(), files_.end(), p) != files_.end()) continue;   // already listed
         if (opts_.max_files && files_.size() >= opts_.max_files) {
             problems.push_back("Only " + std::to_string(opts_.max_files) + (opts_.max_files == 1 ? " file" : " files") + " can be added.");
@@ -163,7 +164,7 @@ void FileUpload::rebuild_rows() {
         ic.set_token(ColorToken::ForegroundDim);
         Box& text = card.add<Box>(Orientation::Vertical, 2.f);
         text.set_expand(true, false);
-        Label& name = text.add<Label>(p.filename().string());
+        Label& name = text.add<Label>(paths::to_utf8(p.filename()));
         name.set_ellipsize(true);
         std::error_code ec;
         r.size = fs::file_size(p, ec);

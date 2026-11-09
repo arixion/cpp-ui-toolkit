@@ -217,7 +217,7 @@ bool TextField::on_pointer(const PointerEvent& e) {
                 while (b < text_.size() && is_word_byte((unsigned char)text_[b])) b = next_char(b);
                 set_selection(a, b);
             }
-            else move_caret(i, e.mods & MOD_SHIFT);
+            else move_caret(i, e.mods & mod::Shift);
             dragging_ = e.click_count < 2;
             return true;
         }
@@ -234,7 +234,7 @@ bool TextField::on_pointer(const PointerEvent& e) {
 
 bool TextField::on_key(const KeyEvent& e) {
     if (!e.pressed || !enabled()) return false;
-    bool shift = e.mods & MOD_SHIFT, ctrl = e.mods & MOD_CTRL;
+    bool shift = e.mods & mod::Shift, ctrl = e.mods & mod::Ctrl;
     switch (e.keysym) {
         case key::Left:
             if (has_selection() && !shift) move_caret(std::min(anchor_, caret_), false);

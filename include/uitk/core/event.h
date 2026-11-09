@@ -8,9 +8,11 @@
 
 namespace uitk {
 
-enum Modifier : uint32_t {
-    MOD_NONE = 0, MOD_SHIFT = 1, MOD_CTRL = 2, MOD_ALT = 4, MOD_SUPER = 8,
-};
+// Modifier key bits (KeyEvent/PointerEvent/ScrollEvent::mods). A namespace of constants rather
+// than MOD_* names: <windows.h> defines MOD_SHIFT and MOD_ALT as macros (and Xlib defines None).
+namespace mod {
+constexpr uint32_t NoModifier = 0, Shift = 1, Ctrl = 2, Alt = 4, Super = 8;
+} // namespace mod
 
 enum class PointerButton { NoButton, Left, Right, Middle, Other };
 
@@ -19,14 +21,14 @@ struct PointerEvent {
     Point         pos;                       // logical px, window-relative
     PointerButton button = PointerButton::NoButton;
     int           click_count = 0;           // 1 = single, 2 = double ... (Down only)
-    uint32_t      mods = MOD_NONE;
+    uint32_t      mods = mod::NoModifier;
     uint32_t      time_ms = 0;
 };
 
 struct ScrollEvent {
     Point    pos;
     float    dx = 0, dy = 0;                 // logical px (positive = right/down)
-    uint32_t mods = MOD_NONE;
+    uint32_t mods = mod::NoModifier;
 };
 
 // Keysyms use the XKB/X11 keysym space (e.g. 'a' = 0x61, Escape = 0xff1b), see uitk::key.
@@ -34,7 +36,7 @@ struct KeyEvent {
     bool     pressed = true;
     bool     repeat  = false;
     uint32_t keysym  = 0;
-    uint32_t mods    = MOD_NONE;
+    uint32_t mods    = mod::NoModifier;
 };
 
 struct TextEvent   { std::string utf8; };     // committed text input

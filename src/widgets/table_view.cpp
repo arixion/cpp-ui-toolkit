@@ -291,14 +291,14 @@ void TableView::layout(const Theme& t) {
 }
 
 bool TableView::on_scroll(const ScrollEvent& e) {
-    float dx = e.dx != 0 ? e.dx : ((e.mods & MOD_SHIFT) ? e.dy : 0.f);
+    float dx = e.dx != 0 ? e.dx : ((e.mods & mod::Shift) ? e.dy : 0.f);
     if (dx == 0 || content_width() <= size().width) return false;
     set_scroll_x(scroll_x_ + dx * 3);
     return true;
 }
 
 bool TableView::on_key(const KeyEvent& e) {
-    if (!e.pressed || (e.mods & (MOD_ALT | MOD_CTRL))) return false;
+    if (!e.pressed || (e.mods & (mod::Alt | mod::Ctrl))) return false;
     if (e.keysym == key::Left) { set_scroll_x(scroll_x_ - 40); return true; }
     if (e.keysym == key::Right) { set_scroll_x(scroll_x_ + 40); return true; }
     return false;

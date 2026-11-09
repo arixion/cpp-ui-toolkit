@@ -139,7 +139,7 @@ void ScrollView::scroll_to(float y, bool animate) {
 
 bool ScrollView::on_scroll(const ScrollEvent& e) {
     // Shift+wheel is horizontal scrolling: leave it to horizontal containers (tables).
-    if (max_offset() <= 0 || e.dy == 0 || (e.mods & MOD_SHIFT)) return false;
+    if (max_offset() <= 0 || e.dy == 0 || (e.mods & mod::Shift)) return false;
     scroll_to(target_ + e.dy * 3);   // one wheel notch ≈ 45 px
     return true;
 }

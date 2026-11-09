@@ -1,4 +1,6 @@
-// Event loop: polls registered fd sources (display connections), runs timers and posted tasks.
+// Event loop: waits on registered event sources (display connections), runs timers and posted
+// tasks. Linux: poll() over file descriptors. Windows: MsgWaitForMultipleObjects, which also
+// dispatches the thread's window messages.
 #pragma once
 #include <chrono>
 #include <cstdint>
@@ -7,15 +9,20 @@
 
 namespace uitk {
 
-// A file-descriptor based event source (e.g. a Wayland or X11 display connection).
+// An event source the loop waits on (e.g. a Wayland or X11 display connection).
 class EventSource {
 public:
+#ifdef _WIN32
+    using Handle = void*;   // a waitable HANDLE (event, waitable timer, ...)
+#else
+    using Handle = int;     // a file descriptor, polled for input
+#endif
     virtual ~EventSource() = default;
-    virtual int  fd() const = 0;
-    // Called before every poll(). Must flush pending output and dispatch already-queued events.
+    virtual Handle handle() const = 0;
+    // Called before every wait. Must flush pending output and dispatch already-queued events.
     virtual void prepare() {}
-    // Called after every poll() with the fd's revents (0 if it was not ready).
-    virtual void dispatch(short revents) = 0;
+    // Called after every wait; `ready` is non-zero if the handle was signalled (POSIX: revents).
+    virtual void dispatch(short ready) = 0;
 };
 
 enum class LoopMode {
@@ -40,6 +47,10 @@ public:
 
     // Thread-safe: queue a task to run on the loop thread.
     void post(std::function<void()> task);
+
+    // Runs due timers and posted tasks now. For platform code that spins a nested message loop
+    // the main loop cannot see (Windows: interactive move/resize, menus), so the app keeps going.
+    void process_pending();
 
     TimerId add_timer(std::chrono::milliseconds delay, std::function<void()> fn, bool repeat = false);
     void    cancel_timer(TimerId id);

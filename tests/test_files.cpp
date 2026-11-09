@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include <unistd.h>
+#include <chrono>
 
 #include "uitk/core/format.h"
 #include "uitk/widgets/file_browser.h"
@@ -22,7 +22,7 @@ namespace {
 fs::path g_root;
 void make_file(const fs::path& p, size_t bytes) { std::ofstream(p) << std::string(bytes, 'x'); }
 void make_fixture() {
-    g_root = fs::temp_directory_path() / ("uitk_files_test_" + std::to_string(::getpid()));
+    g_root = fs::temp_directory_path() / ("uitk_files_test_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     fs::remove_all(g_root);
     fs::create_directories(g_root / "alpha");
     fs::create_directories(g_root / "beta" / "inner");
@@ -105,7 +105,7 @@ static void test_browser() {
     list.grab_focus();
     list.select_only(3);   // file2.txt
     CHECK(b.can_accept() && b.accept_paths().size() == 1);
-    shell.handle_event(key_ev(key::Down, MOD_SHIFT));   // extend to file10.txt
+    shell.handle_event(key_ev(key::Down, mod::Shift));   // extend to file10.txt
     CHECK(list.selection().size() == 2);
     shell.handle_event(key_ev(key::Return));
     CHECK(activated.size() == 2);
@@ -113,7 +113,7 @@ static void test_browser() {
     list.select_only(0);
     shell.handle_event(key_ev(key::Return));
     CHECK(b.directory().filename() == "alpha");
-    shell.handle_event(key_ev(key::Up, MOD_ALT));
+    shell.handle_event(key_ev(key::Up, mod::Alt));
     CHECK(b.directory() == fs::weakly_canonical(g_root));
 
     // Ctrl+click toggles, Shift+click ranges (pointer events on the list).
@@ -123,11 +123,11 @@ static void test_browser() {
     shell.handle_event(ptr(PointerEvent::Type::Move, row_point(2)));
     shell.handle_event(ptr(PointerEvent::Type::Down, row_point(2)));
     shell.handle_event(ptr(PointerEvent::Type::Up, row_point(2)));
-    shell.handle_event(ptr(PointerEvent::Type::Down, row_point(5), MOD_SHIFT));
-    shell.handle_event(ptr(PointerEvent::Type::Up, row_point(5), MOD_SHIFT));
+    shell.handle_event(ptr(PointerEvent::Type::Down, row_point(5), mod::Shift));
+    shell.handle_event(ptr(PointerEvent::Type::Up, row_point(5), mod::Shift));
     CHECK(list.selection().size() == 4);
-    shell.handle_event(ptr(PointerEvent::Type::Down, row_point(3), MOD_CTRL));
-    shell.handle_event(ptr(PointerEvent::Type::Up, row_point(3), MOD_CTRL));
+    shell.handle_event(ptr(PointerEvent::Type::Down, row_point(3), mod::Ctrl));
+    shell.handle_event(ptr(PointerEvent::Type::Up, row_point(3), mod::Ctrl));
     CHECK(list.selection().size() == 3 && !list.is_selected(3));
 
     // Type-ahead jumps to "image.png".

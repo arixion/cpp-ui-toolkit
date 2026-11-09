@@ -143,10 +143,10 @@ void ListView::on_state_changed(uint32_t) {
 
 void ListView::click_select(size_t i, uint32_t mods) {
     if (mode_ == SelectionMode::None || !model_->row_enabled(i)) { cursor_ = i; invalidate(); return; }
-    if (mode_ == SelectionMode::Multiple && (mods & MOD_CTRL)) {
+    if (mode_ == SelectionMode::Multiple && (mods & mod::Ctrl)) {
         selected_[i] = !selected_[i];
         cursor_ = anchor_ = i;
-    } else if (mode_ == SelectionMode::Multiple && (mods & MOD_SHIFT)) {
+    } else if (mode_ == SelectionMode::Multiple && (mods & mod::Shift)) {
         select_range(anchor_, i, false);
         cursor_ = i;
     } else {
@@ -184,10 +184,10 @@ void ListView::move_cursor(long to, uint32_t mods) {
     long n = (long)count();
     if (n == 0) return;
     to = std::clamp(to, 0L, n - 1);
-    if (mode_ == SelectionMode::Multiple && (mods & MOD_SHIFT)) {
+    if (mode_ == SelectionMode::Multiple && (mods & mod::Shift)) {
         select_range(anchor_, (size_t)to, false);
         selection_changed.emit();
-    } else if (!(mods & MOD_CTRL) && mode_ != SelectionMode::None && model_->row_enabled((size_t)to)) {
+    } else if (!(mods & mod::Ctrl) && mode_ != SelectionMode::None && model_->row_enabled((size_t)to)) {
         std::fill(selected_.begin(), selected_.end(), false);
         selected_[(size_t)to] = true;
         anchor_ = (size_t)to;
@@ -198,7 +198,7 @@ void ListView::move_cursor(long to, uint32_t mods) {
 
 bool ListView::on_key(const KeyEvent& e) {
     if (!e.pressed || !model_ || count() == 0) return false;
-    if (e.mods & MOD_ALT) return false;   // Alt+arrows belong to the owner (e.g. history navigation)
+    if (e.mods & mod::Alt) return false;   // Alt+arrows belong to the owner (e.g. history navigation)
     long page = std::max(1L, (long)(visible_rect().height / row_height()) - 1);
     long c = (long)cursor_;
     switch (e.keysym) {
@@ -210,7 +210,7 @@ bool ListView::on_key(const KeyEvent& e) {
         case key::End:      move_cursor((long)count() - 1, e.mods); return true;
         case key::Return: case kKpEnter: activated.emit(cursor_); return true;
         case kSpace:
-            if (mode_ == SelectionMode::Multiple && (e.mods & MOD_CTRL)) {
+            if (mode_ == SelectionMode::Multiple && (e.mods & mod::Ctrl)) {
                 selected_[cursor_] = !selected_[cursor_] && model_->row_enabled(cursor_);
                 invalidate();
                 selection_changed.emit();
@@ -218,7 +218,7 @@ bool ListView::on_key(const KeyEvent& e) {
             }
             break;
     }
-    if ((e.mods & MOD_CTRL) && e.keysym == key::letter('a')) { select_all(); return true; }
+    if ((e.mods & mod::Ctrl) && e.keysym == key::letter('a')) { select_all(); return true; }
     return false;
 }
 

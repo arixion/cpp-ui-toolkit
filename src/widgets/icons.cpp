@@ -5,6 +5,8 @@
 #include <filesystem>
 #include <unordered_map>
 
+#include "uitk/core/paths.h"
+
 #ifndef UITK_DEFAULT_ICON_DIR
 #define UITK_DEFAULT_ICON_DIR "assets/icons/adwaita/symbolic"
 #endif
@@ -38,8 +40,8 @@ const Image& symbolic(std::string_view name) {
                                        "categories", "emotes", "apps", "legacy"};
     Image img;
     for (const char* cat : categories) {
-        std::filesystem::path p = std::filesystem::path(path_ref()) / cat / (key + "-symbolic.svg");
-        if (std::filesystem::exists(p)) { img = Image::load(p.string()); break; }
+        std::filesystem::path p = paths::from_utf8(path_ref()) / cat / (key + "-symbolic.svg");
+        if (std::filesystem::exists(p)) { img = Image::load(paths::to_utf8(p)); break; }
     }
     if (!img.valid()) fprintf(stderr, "uitk: icon '%s' not found in %s\n", key.c_str(), path_ref().c_str());
     return cache().emplace(std::move(key), std::move(img)).first->second;
@@ -47,7 +49,7 @@ const Image& symbolic(std::string_view name) {
 
 const Image& for_file(const std::filesystem::path& path, bool is_directory) {
     if (is_directory) return symbolic("folder");
-    std::string ext = path.extension().string();
+    std::string ext = paths::to_utf8(path.extension());
     for (auto& c : ext) c = (char)std::tolower((unsigned char)c);
     static const std::unordered_map<std::string, const char*> by_ext = {
         {".png", "image-x-generic"}, {".jpg", "image-x-generic"}, {".jpeg", "image-x-generic"},

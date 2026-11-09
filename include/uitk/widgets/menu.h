@@ -31,10 +31,10 @@ class WidgetHost;
 // A key combination: parses and prints "Ctrl+Shift+P", "F5", "Alt+Up", "Ctrl+,".
 struct Shortcut {
     uint32_t keysym = 0;
-    uint32_t mods = MOD_NONE;
+    uint32_t mods = mod::NoModifier;
 
     Shortcut() = default;
-    Shortcut(uint32_t key, uint32_t modifiers = MOD_NONE) : keysym(key), mods(modifiers) {}
+    Shortcut(uint32_t key, uint32_t modifiers = mod::NoModifier) : keysym(key), mods(modifiers) {}
     static Shortcut parse(std::string_view text);   // invalid text: empty shortcut
 
     explicit operator bool() const { return keysym != 0; }

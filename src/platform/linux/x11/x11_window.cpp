@@ -26,6 +26,7 @@
 
 #include "uitk/core/application.h"
 #include "../linux_common.h"
+#include "../../common/frame_pacer.h"
 
 namespace uitk::linux_impl {
 namespace {
@@ -56,7 +57,7 @@ class X11Display final : public EventSource {
 public:
     static X11Display* get(Application& app);
 
-    int  fd() const override { return ConnectionNumber(dpy); }
+    Handle handle() const override { return ConnectionNumber(dpy); }
     void prepare() override { process_queued(); XFlush(dpy); }
     void dispatch(short) override { process_queued(); }
 
@@ -165,14 +166,14 @@ public:
     bool maximized_ = false, active_ = false, mapped_ = false;
     MouseCursor cursor_ = MouseCursor::Default;
 
-    bool dirty = false, scheduled = false;
+    bool dirty = false;
+    platform::FramePacer pacer{app, [this] { paint_now(); }};
     // _NET_WM_SYNC_REQUEST: the WM waits for us to draw each new size before showing it,
     // so interactive resizes never reveal an undrawn window.
     XSyncCounter sync_counter = None;
     XSyncValue   sync_value{};
     bool         sync_pending = false;
     bool         presented_ = false;   // a frame was presented during the current paint
-    std::chrono::steady_clock::time_point next_frame{};   // continuous-mode frame grid
     std::chrono::steady_clock::time_point last_configure{}; // last size change (resize in progress?)
 };
 
@@ -289,8 +290,8 @@ void X11Display::process_queued() {
 }
 
 uint32_t x_mods(unsigned state) {
-    return (state & ShiftMask ? MOD_SHIFT : 0) | (state & ControlMask ? MOD_CTRL : 0) |
-           (state & Mod1Mask ? MOD_ALT : 0) | (state & Mod4Mask ? MOD_SUPER : 0);
+    return (state & ShiftMask ? mod::Shift : 0) | (state & ControlMask ? mod::Ctrl : 0) |
+           (state & Mod1Mask ? mod::Alt : 0) | (state & Mod4Mask ? mod::Super : 0);
 }
 
 void X11Display::handle(XEvent& ev) {
@@ -392,7 +393,7 @@ void X11Display::handle(XEvent& ev) {
             ke.mods = x_mods(ev.xkey.state);
             last_keycode = ev.xkey.keycode;
             w->emit(ke);
-            if (n > 0 && (unsigned char)buf[0] >= 0x20 && buf[0] != 0x7f && !(ke.mods & (MOD_CTRL | MOD_SUPER)))
+            if (n > 0 && (unsigned char)buf[0] >= 0x20 && buf[0] != 0x7f && !(ke.mods & (mod::Ctrl | mod::Super)))
                 w->emit(TextEvent{std::string(buf, (size_t)n)});
             break;
         }
@@ -616,18 +617,8 @@ void X11Window::apply_frame_extents() {
 
 void X11Window::request_redraw() {
     dirty = true;
-    if (scheduled || !win) return;
-    scheduled = true;
-    // No compositor frame callbacks on X11: pace frames on a fixed 60 Hz grid (continuous mode
-    // and running animations alike). Targets are absolute, so timer latency never accumulates
-    // into dropped frames; when idle the next slot is already due, so input redraws at once.
-    auto now = std::chrono::steady_clock::now();
-    if (next_frame > now) {
-        auto wait = std::chrono::ceil<std::chrono::milliseconds>(next_frame - now);
-        app.add_timer(wait, [this] { scheduled = false; paint_now(); });
-    } else {
-        app.post([this] { scheduled = false; paint_now(); });
-    }
+    // No compositor frame callbacks on X11: frames are paced on a fixed 60 Hz grid.
+    if (win) pacer.request();
 }
 
 void X11Window::paint_now() {
@@ -642,10 +633,7 @@ void X11Window::paint_now() {
     d->process_queued();
     if (!dirty || !win) return;
     dirty = false;
-    auto now = std::chrono::steady_clock::now();
-    constexpr auto period = std::chrono::nanoseconds(16'666'667);
-    if (next_frame + period < now) next_frame = now;   // idle or stalled: resync the grid
-    next_frame += period;                              // target of the following frame
+    pacer.frame_drawn();
     presented_ = false;
     run_frame();   // sets the frame clock, calls on_frame, keeps animations going
     if (presented_ && sync_pending) {

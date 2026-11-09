@@ -6,6 +6,7 @@
 #include <cstdlib>
 
 #include "uitk/core/format.h"
+#include "uitk/core/paths.h"
 #include "uitk/widgets/containers.h"
 #include "uitk/widgets/dropdown.h"
 #include "uitk/widgets/glyphs.h"
@@ -61,17 +62,6 @@ bool natural_less(const std::string& a, const std::string& b) {
         ++i; ++j;
     }
     return a.size() - i < b.size() - j;
-}
-
-fs::path home_dir() {
-    const char* h = getenv("HOME");
-    return h && *h ? fs::path(h) : fs::path("/");
-}
-
-fs::path expand_user(const std::string& text) {
-    if (text == "~") return home_dir();
-    if (text.rfind("~/", 0) == 0) return home_dir() / text.substr(2);
-    return fs::path(text);
 }
 
 std::string describe(const std::error_code& ec) {
@@ -210,10 +200,10 @@ FileBrowser::FileBrowser(FileBrowserOptions options)
     path_->set_expand(true, false);
     path_->set_tooltip("Type a path and press Enter (Ctrl+L)");
     path_->activated.connect([this] {
-        if (!navigate(expand_user(path_->text()))) path_->select_all();
+        if (!navigate(paths::expand_user(path_->text()))) path_->select_all();
         else list_->grab_focus();
     });
-    path_->editing_finished.connect([this] { if (!path_->has_focus()) path_->set_text(dir_.string()); });
+    path_->editing_finished.connect([this] { if (!path_->has_focus()) path_->set_text(paths::to_utf8(dir_)); });
     search_field_ = &bar.add<TextField>("", "Filter");
     search_field_->set_fixed_size({170, 0});
     search_field_->changed.connect([this](const std::string& s) { set_search(s); });
@@ -234,20 +224,29 @@ FileBrowser::FileBrowser(FileBrowserOptions options)
     side.set_padding(Insets{8, 10, 8, 8});
     side.add<Label>("Places", TextRole::Chrome).set_align(Align::Start, Align::Center);
     places_ = &side.add<ListBox>();
-    fs::path home = home_dir();
+    fs::path home = paths::home_directory();
     struct Place { const char* name; fs::path path; const char* icon; };
     for (const Place& p : {Place{"Home", home, "user-home"}, Place{"Desktop", home / "Desktop", "user-desktop"},
                            Place{"Documents", home / "Documents", "folder-documents"},
                            Place{"Downloads", home / "Downloads", "folder-download"},
                            Place{"Pictures", home / "Pictures", "folder-pictures"},
                            Place{"Music", home / "Music", "folder-music"},
-                           Place{"Videos", home / "Videos", "folder-videos"},
-                           Place{"Computer", fs::path("/"), "drive-harddisk"}}) {
+                           Place{"Videos", home / "Videos", "folder-videos"}}) {
         std::error_code ec;
         if (!fs::is_directory(p.path, ec)) continue;
         ListRow& row = places_->add<ListRow>(p.name, icons::symbolic(p.icon));
         size_t index = place_paths_.size();
         place_paths_.push_back(p.path);
+        row.activated.connect([this, index] { navigate(place_paths_[index]); });
+    }
+    // Filesystem roots: "/" on Linux ("Computer"), each drive on Windows ("C:").
+    std::vector<fs::path> roots = paths::roots();
+    for (const fs::path& r : roots) {
+        std::string name = roots.size() == 1 && r == r.root_path() && !r.has_root_name()
+                               ? std::string("Computer") : paths::to_utf8(r.root_name());
+        ListRow& row = places_->add<ListRow>(name, icons::symbolic("drive-harddisk"));
+        size_t index = place_paths_.size();
+        place_paths_.push_back(r);
         row.activated.connect([this, index] { navigate(place_paths_[index]); });
     }
     body.add<Separator>(Orientation::Vertical);
@@ -290,14 +289,14 @@ bool FileBrowser::navigate(const fs::path& target) {
     std::error_code ec;
     fs::path p = fs::weakly_canonical(fs::absolute(target, ec), ec);
     if (ec || !fs::is_directory(p, ec)) {
-        error_ = "“" + target.string() + "” is not a folder.";
+        error_ = "“" + paths::to_utf8(target) + "” is not a folder.";
         update_status();
         return false;
     }
     // Check readability before leaving the current folder.
     fs::directory_iterator probe(p, ec);
     if (ec) {
-        error_ = "Cannot open “" + p.filename().string() + "”: " + describe(ec);
+        error_ = "Cannot open “" + paths::to_utf8(p.filename()) + "”: " + describe(ec);
         update_status();
         return false;
     }
@@ -352,8 +351,8 @@ void FileBrowser::load() {
         const fs::directory_entry& de = *it;
         FileEntry e;
         e.path = de.path();
-        e.name = e.path.filename().string();
-        e.hidden = !e.name.empty() && e.name[0] == '.';
+        e.name = paths::to_utf8(e.path.filename());
+        e.hidden = paths::is_hidden(e.path);
         std::error_code ec2;
         e.is_symlink = de.is_symlink(ec2);
         e.is_dir = de.is_directory(ec2);   // follows symlinks
@@ -435,7 +434,7 @@ void FileBrowser::update_chrome() {
     back_->set_enabled(history_index_ > 0);
     forward_->set_enabled(history_index_ + 1 < history_.size());
     up_->set_enabled(dir_.has_parent_path() && dir_.parent_path() != dir_);
-    if (!path_->has_focus()) path_->set_text(dir_.string());
+    if (!path_->has_focus()) path_->set_text(paths::to_utf8(dir_));
     // Highlight the place we are in (if any).
     ListRow* match = nullptr;
     size_t k = 0;
@@ -503,7 +502,7 @@ void FileBrowser::activate(size_t row) {
 
 bool FileBrowser::on_key(const KeyEvent& e) {
     if (!e.pressed) return false;
-    bool alt = e.mods & MOD_ALT, ctrl = e.mods & MOD_CTRL;
+    bool alt = e.mods & mod::Alt, ctrl = e.mods & mod::Ctrl;
     if (alt && e.keysym == key::Left) { go_back(); return true; }
     if (alt && e.keysym == key::Right) { go_forward(); return true; }
     if (alt && e.keysym == key::Up) { go_up(); return true; }

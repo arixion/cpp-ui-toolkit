@@ -53,10 +53,10 @@ Shortcut Shortcut::parse(std::string_view text) {
     if (parts.empty()) return {};
     for (size_t i = 0; i + 1 < parts.size(); ++i) {
         std::string m = lower(parts[i]);
-        if (m == "ctrl" || m == "control") sc.mods |= MOD_CTRL;
-        else if (m == "shift") sc.mods |= MOD_SHIFT;
-        else if (m == "alt") sc.mods |= MOD_ALT;
-        else if (m == "super" || m == "meta" || m == "win") sc.mods |= MOD_SUPER;
+        if (m == "ctrl" || m == "control") sc.mods |= mod::Ctrl;
+        else if (m == "shift") sc.mods |= mod::Shift;
+        else if (m == "alt") sc.mods |= mod::Alt;
+        else if (m == "super" || m == "meta" || m == "win") sc.mods |= mod::Super;
         else return {};
     }
     std::string k = parts.back(), lk = lower(k);
@@ -75,16 +75,16 @@ bool Shortcut::matches(const KeyEvent& e) const {
     uint32_t k = e.keysym;
     if (k >= 'A' && k <= 'Z') k = k - 'A' + 'a';
     if (k == kKpEnter) k = key::Return;
-    return k == keysym && (e.mods & (MOD_CTRL | MOD_SHIFT | MOD_ALT | MOD_SUPER)) == mods;
+    return k == keysym && (e.mods & (mod::Ctrl | mod::Shift | mod::Alt | mod::Super)) == mods;
 }
 
 std::string Shortcut::text() const {
     if (!keysym) return {};
     std::string s;
-    if (mods & MOD_CTRL) s += "Ctrl+";
-    if (mods & MOD_ALT) s += "Alt+";
-    if (mods & MOD_SHIFT) s += "Shift+";
-    if (mods & MOD_SUPER) s += "Super+";
+    if (mods & mod::Ctrl) s += "Ctrl+";
+    if (mods & mod::Alt) s += "Alt+";
+    if (mods & mod::Shift) s += "Shift+";
+    if (mods & mod::Super) s += "Super+";
     if (keysym >= key::F1 && keysym < key::F1 + 24) return s + "F" + std::to_string(keysym - key::F1 + 1);
     for (auto& kn : kKeyNames) if (kn.sym == keysym) return s + kn.name;
     if (keysym < 0x80) s += (char)std::toupper((int)keysym);
@@ -627,8 +627,8 @@ bool MenuBar::trigger_shortcut(const KeyEvent& e) {
 
 bool MenuBar::handle_key(const KeyEvent& e) {
     if (!e.pressed || !visible() || !enabled()) return false;
-    uint32_t mods = e.mods & (MOD_CTRL | MOD_SHIFT | MOD_ALT | MOD_SUPER);
-    if (mods == MOD_ALT && e.keysym < 0x80) {
+    uint32_t mods = e.mods & (mod::Ctrl | mod::Shift | mod::Alt | mod::Super);
+    if (mods == mod::Alt && e.keysym < 0x80) {
         char32_t c = (char32_t)std::tolower((int)e.keysym);
         for (int i = 0; i < (int)entries_.size(); ++i)
             if (entries_[(size_t)i].title.mnemonic() == c) { open(i, true); return true; }
