@@ -1,0 +1,3 @@
+third_party/skia/
+build-linux/
+compile_commands.json
