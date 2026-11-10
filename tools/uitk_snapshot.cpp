@@ -20,11 +20,15 @@ using namespace uitk;
 int main(int argc, char** argv) {
     if (argc < 2) {
         fprintf(stderr, "usage: %s <out.png> [--dark] [--scale S] [--size WxH] [--hover min|max|close|primary]"
+                        " [--theme NAME] [--accent N] [--roundness F] [--text-size PX]"
                         " [--focus] [--maximized] [--inactive]\n", argv[0]);
         return 2;
     }
     const char* out = argv[1];
     bool dark = false, maximized = false, focus = false, inactive = false, adwaita = false;
+    const char* theme_name = nullptr;   // a Theme::presets() name; overrides --dark / --style
+    int accent = 0;
+    float roundness = 1, text_size = 0;
     bool dropdown = false, tooltip = false;
     float scroll_y = 0;
     const char* type_text = nullptr;
@@ -37,6 +41,10 @@ int main(int argc, char** argv) {
         else if (!strcmp(argv[i], "--focus")) focus = true;
         else if (!strcmp(argv[i], "--inactive")) inactive = true;
         else if (!strcmp(argv[i], "--style") && i + 1 < argc) adwaita = !strcmp(argv[++i], "adwaita");
+        else if (!strcmp(argv[i], "--theme") && i + 1 < argc) theme_name = argv[++i];
+        else if (!strcmp(argv[i], "--accent") && i + 1 < argc) accent = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "--roundness") && i + 1 < argc) roundness = (float)atof(argv[++i]);
+        else if (!strcmp(argv[i], "--text-size") && i + 1 < argc) text_size = (float)atof(argv[++i]);
         else if (!strcmp(argv[i], "--dropdown")) dropdown = true;
         else if (!strcmp(argv[i], "--tooltip")) tooltip = true;
         else if (!strcmp(argv[i], "--scroll") && i + 1 < argc) scroll_y = (float)atof(argv[++i]);
@@ -50,9 +58,19 @@ int main(int argc, char** argv) {
 
     WindowShell shell(nullptr, "uitk hello (snapshot)");
     hello::Demo demo(shell);
-    int preset = (adwaita ? 2 : 0) + (dark ? 0 : 1);   // index into Demo::presets()
-    shell.set_theme(hello::Demo::presets()[(size_t)preset].second, false);
-    demo.show_theme(preset);
+    int preset = (adwaita ? 2 : 0) + (dark ? 0 : 1);   // index into Theme::presets()
+    if (theme_name) {
+        const auto& all = Theme::presets();
+        preset = -1;
+        for (size_t i = 0; i < all.size(); ++i)
+            if (!strcmp(all[i].name, theme_name)) preset = (int)i;
+        if (preset < 0) { fprintf(stderr, "unknown theme %s\n", theme_name); return 2; }
+    }
+    demo.select_preset(preset);
+    if (accent) demo.set_accent(accent);
+    if (roundness != 1) demo.set_roundness(roundness);
+    if (text_size > 0) demo.set_text_size(text_size);
+    shell.set_theme(demo.current_theme(), false);
     shell.set_maximized(maximized);
     shell.set_active(!inactive);
 

@@ -1,5 +1,8 @@
 #include "uitk/widgets/theme.h"
 
+#include <algorithm>
+#include <cmath>
+
 namespace uitk {
 
 // ---------------------------------------------------------------------------- derived tokens
@@ -21,6 +24,181 @@ void Theme::derive() {
     badge_fg        = button_primary.foreground;
     link            = accent;
     toggle_on       = {mix(0.16f), foreground, foreground};
+}
+
+// ---------------------------------------------------------------------------- customization
+
+Theme Theme::with_palette(const ThemePalette& p) const {
+    Theme t = *this;
+    t.window_bg        = p.background;
+    t.surface_bg       = p.surface;
+    t.input_bg         = p.input;
+    t.border           = p.border;
+    t.input_border     = p.input_border;
+    t.foreground       = p.foreground;
+    t.foreground_dim   = p.foreground_dim;
+    t.chrome_fg        = p.chrome;
+    t.accent           = p.accent_text;
+    t.focus_ring       = p.accent_text.with_alpha(focus_ring.a ? focus_ring.a : 255);
+    t.shadow           = Color::hex(0x000000);
+    t.selection_bg     = p.selection_bg;
+    t.selection_fg     = p.selection_fg;
+    t.selection_fg_dim = lerp(p.selection_fg, p.selection_bg, 0.4f);
+    t.button             = {p.button, p.foreground, p.foreground};
+    t.button_primary     = {p.accent, p.on_accent, p.on_accent};
+    t.button_destructive = {p.danger, p.on_danger, p.on_danger};
+    t.button_flat        = {Color::transparent(), p.foreground, p.foreground};
+    t.window_control = window_controls == WindowControlsStyle::Circular
+                           ? ControlColors{p.foreground.with_opacity(0.10f), p.foreground, p.foreground}
+                           : ControlColors{Color::transparent(), p.chrome, p.foreground};
+    t.derive();
+    return t;
+}
+
+Theme Theme::with_accent(Color c) const {
+    Theme t = *this;
+    const Color white = Color::hex(0xffffff), black = Color::hex(0x000000);
+    Color on = contrast_ratio(c, white) >= 3.f ? white : black;
+    // As text on the window the accent needs 4.5:1; pull it toward the foreground until it has it.
+    Color text = c;
+    for (int i = 0; i < 20 && contrast_ratio(text, window_bg) < 4.5f; ++i) text = lerp(text, foreground, 0.1f);
+    t.accent = text;
+    t.focus_ring = text.with_alpha(focus_ring.a);
+    t.button_primary = {c, on, on};
+    t.derive();
+    return t;
+}
+
+Theme Theme::with_look_of(const Theme& look) const {
+    Theme t = lerp(*this, look, 0.f);   // colours (t = 0) from this, everything else from `look`
+    t.name = name;
+    return t;
+}
+
+Theme Theme::with_roundness(float s) const {
+    Theme t = *this;
+    s = std::max(0.f, s);
+    for (float* r : {&t.radius, &t.toolbar_radius, &t.card_radius, &t.list_radius, &t.popup_radius, &t.window_radius})
+        *r = std::round(*r * s);
+    return t;
+}
+
+Theme Theme::with_font_size(float px) const {
+    Theme t = *this;
+    float f = px / font_size;
+    t.font_size = px;
+    t.font_size_small = std::round(font_size_small * f);
+    t.font_size_heading = std::round(font_size_heading * f);
+    return t;
+}
+
+const std::vector<Theme::Preset>& Theme::presets() {
+    static const std::vector<Preset> p = {
+        {"VS Code Dark", vscode_dark},     {"VS Code Light", vscode_light},
+        {"Adwaita Dark", adwaita_dark},    {"Adwaita Light", adwaita_light},
+        {"Absolute Dark", absolute_dark},  {"Absolute Light", absolute_light},
+        {"Nord", nord},                    {"Abyss", abyss},
+    };
+    return p;
+}
+
+// ---------------------------------------------------------------------------- palette presets
+// These use the default (VS Code) metrics and chrome; combine with with_look_of() for others.
+
+Theme Theme::nord() {
+    // nordtheme.com: Polar Night nord0-3, Snow Storm nord4-6, Frost nord7-10, Aurora nord11-15.
+    ThemePalette p;
+    p.background     = Color::hex(0x2e3440);   // nord0
+    p.surface        = Color::hex(0x2e3440);
+    p.input          = Color::hex(0x3b4252);   // nord1
+    p.border         = Color::hex(0x3b4252);
+    p.input_border   = Color::hex(0x4c566a);   // nord3
+    p.foreground     = Color::hex(0xd8dee9);   // nord4
+    p.foreground_dim = Color::hex(0x939cad);   // nord3 / nord4 midpoint, readable on nord0
+    p.chrome         = Color::hex(0xb3bbc9);
+    p.accent         = Color::hex(0x88c0d0);   // nord8
+    p.on_accent      = Color::hex(0x2e3440);
+    p.accent_text    = Color::hex(0x88c0d0);
+    p.button         = Color::hex(0x434c5e);   // nord2
+    p.selection_bg   = Color::hex(0x434c5e);
+    p.selection_fg   = Color::hex(0xeceff4);   // nord6
+    p.danger         = Color::hex(0xbf616a);   // nord11
+    p.on_danger      = Color::hex(0xeceff4);
+    Theme t = Theme{}.with_palette(p);
+    t.name = "Nord";
+    return t;
+}
+
+Theme Theme::abyss() {
+    // VS Code's built-in Abyss: navy editor, periwinkle text, ocean-blue badges, gold cursor.
+    ThemePalette p;
+    p.background     = Color::hex(0x000c18);
+    p.surface        = Color::hex(0x060621);
+    p.input          = Color::hex(0x181f2f);
+    p.border         = Color::hex(0x10192c);
+    p.input_border   = Color::hex(0x2b3c5d);
+    p.foreground     = Color::hex(0x8aa4e0);   // Abyss text (#6688cc) lifted for small UI text
+    p.foreground_dim = Color::hex(0x6580bd);
+    p.chrome         = Color::hex(0x6688cc);
+    p.accent         = Color::hex(0x0063a5);   // badges / buttons
+    p.on_accent      = Color::hex(0xffffff);
+    p.accent_text    = Color::hex(0x4f9dff);
+    p.button         = Color::hex(0x1b2a47);
+    p.selection_bg   = Color::hex(0x08286b);
+    p.selection_fg   = Color::hex(0xddbb88);   // Abyss cursor gold
+    p.danger         = Color::hex(0xa22d44);
+    p.on_danger      = Color::hex(0xffffff);
+    Theme t = Theme{}.with_palette(p);
+    t.name = "Abyss";
+    return t;
+}
+
+Theme Theme::absolute_dark() {
+    ThemePalette p;
+    p.background     = Color::hex(0x000000);
+    p.surface        = Color::hex(0x000000);
+    p.input          = Color::hex(0x0a0a0a);
+    p.border         = Color::hex(0x1f1f1f);
+    p.input_border   = Color::hex(0x333333);
+    p.foreground     = Color::hex(0xf2f2f2);
+    p.foreground_dim = Color::hex(0x8c8c8c);
+    p.chrome         = Color::hex(0xa6a6a6);
+    p.accent         = Color::hex(0xffffff);
+    p.on_accent      = Color::hex(0x000000);
+    p.accent_text    = Color::hex(0xffffff);
+    p.button         = Color::hex(0x1f1f1f);
+    p.selection_bg   = Color::hex(0x262626);
+    p.selection_fg   = Color::hex(0xffffff);
+    p.danger         = Color::hex(0xff453a);
+    p.on_danger      = Color::hex(0x000000);
+    Theme t = Theme{}.with_palette(p);
+    t.name = "Absolute Dark";
+    return t;
+}
+
+Theme Theme::absolute_light() {
+    ThemePalette p;
+    p.background     = Color::hex(0xffffff);
+    p.surface        = Color::hex(0xffffff);
+    p.input          = Color::hex(0xffffff);
+    p.border         = Color::hex(0xe6e6e6);
+    p.input_border   = Color::hex(0xcccccc);
+    p.foreground     = Color::hex(0x0d0d0d);
+    p.foreground_dim = Color::hex(0x6b6b6b);
+    p.chrome         = Color::hex(0x595959);
+    p.accent         = Color::hex(0x000000);
+    p.on_accent      = Color::hex(0xffffff);
+    p.accent_text    = Color::hex(0x000000);
+    p.button         = Color::hex(0xebebeb);
+    p.selection_bg   = Color::hex(0xebebeb);
+    p.selection_fg   = Color::hex(0x000000);
+    p.danger         = Color::hex(0xd70015);
+    p.on_danger      = Color::hex(0xffffff);
+    Theme t = Theme{};
+    t.hover_opacity = 0.07f;
+    t = t.with_palette(p);
+    t.name = "Absolute Light";
+    return t;
 }
 
 // ---------------------------------------------------------------------------- VS Code
@@ -54,31 +232,32 @@ Theme Theme::vscode_dark() {
 }
 
 Theme Theme::vscode_light() {
-    // VS Code "Light Modern" palette on a white window.
+    // The VS Code Dark palette (blue-grey text, teal accent, pale-yellow selection, slate greys,
+    // red) re-toned for a light window: same hues, lightness flipped where contrast needs it.
     Theme t;
     t.name             = "VS Code Light";
-    t.window_bg        = Color::hex(0xffffff);
-    t.surface_bg       = Color::hex(0xffffff);
-    t.input_bg         = Color::hex(0xf8f8f8);
-    t.border           = Color::hex(0xe5e5e5);
-    t.input_border     = Color::hex(0xcecece);
-    t.foreground       = Color::hex(0x3b3b3b);
-    t.foreground_dim   = Color::hex(0x767676);
-    t.chrome_fg        = Color::hex(0x616161);
-    t.accent           = Color::hex(0x005fb8);
-    t.focus_ring       = Color::hex(0x005fb8);
-    t.shadow           = Color::hex(0x000000);
-    t.selection_bg     = Color::hex(0xe4e6f1);
-    t.selection_fg     = Color::hex(0x1f1f1f);
-    t.selection_fg_dim = Color::hex(0x616161);
+    t.window_bg        = Color::hex(0xf6f9fb);   // bfd4e1 lifted almost to white
+    t.surface_bg       = Color::hex(0xf6f9fb);
+    t.input_bg         = Color::hex(0xffffff);
+    t.border           = Color::hex(0xdce5eb);
+    t.input_border     = Color::hex(0xc2ced5);
+    t.foreground       = Color::hex(0x1d2b34);   // bfd4e1 hue, deep
+    t.foreground_dim   = Color::hex(0x5f6a70);   // dark theme's chrome grey
+    t.chrome_fg        = Color::hex(0x5f6a70);
+    t.accent           = Color::hex(0x2b7c80);   // a9dadc hue, deep enough for text on white
+    t.focus_ring       = Color::hex(0x2b7c80);
+    t.shadow           = Color::hex(0x1d2b34);
+    t.selection_bg     = Color::hex(0xf0f3bd);   // the dark theme's selection yellow
+    t.selection_fg     = Color::hex(0x1d2b34);
+    t.selection_fg_dim = Color::hex(0x5c5f30);
 
-    t.button             = {Color::hex(0xe5e5e5), Color::hex(0x3b3b3b), Color::hex(0x000000)};
-    t.button_primary     = {Color::hex(0x005fb8), Color::hex(0xffffff), Color::hex(0xffffff)};
-    t.button_destructive = {Color::hex(0xc42b1c), Color::hex(0xffffff), Color::hex(0xffffff)};
-    t.button_flat        = {Color::transparent(), Color::hex(0x3b3b3b), Color::hex(0x000000)};
-    t.window_control     = {Color::transparent(), Color::hex(0x616161), Color::hex(0x000000)};
+    t.button             = {Color::hex(0xe2eaef), Color::hex(0x1d2b34), Color::hex(0x1d2b34)};
+    t.button_primary     = {Color::hex(0x8fcdd0), Color::hex(0x0d1f20), Color::hex(0x0d1f20)};
+    t.button_destructive = {Color::hex(0xd23c3c), Color::hex(0xffffff), Color::hex(0xffffff)};
+    t.button_flat        = {Color::transparent(), Color::hex(0x1d2b34), Color::hex(0x1d2b34)};
+    t.window_control     = {Color::transparent(), Color::hex(0x5f6a70), Color::hex(0x1d2b34)};
     t.hover_opacity = 0.07f;
-    t.press_opacity = 0.07f;
+    t.press_opacity = 0.10f;
     t.derive();
     return t;
 }

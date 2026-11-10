@@ -47,6 +47,27 @@ enum class TitleStyle {
     CommandCenter,   // title inside a centred input-like box (VS Code command center)
 };
 
+// The handful of colours that define a colour scheme. Theme::with_palette() expands one into
+// every theme colour, so a new scheme (or a user's custom one) is just these values.
+struct ThemePalette {
+    Color background;       // window, title bar, status bar, content
+    Color surface;          // cards, notifications
+    Color input;            // text fields, command center
+    Color border;           // panel / card borders
+    Color input_border;     // input outlines
+    Color foreground;       // primary text and icons
+    Color foreground_dim;   // secondary text
+    Color chrome;           // menus, title bar, panel headers, status bar text
+    Color accent;           // filled accents: primary button, checks, switches, sliders
+    Color on_accent;        // text and marks drawn on `accent`
+    Color accent_text;      // accent used as text on `background`: links, focus ring
+    Color button;           // secondary button fill
+    Color selection_bg;     // selected list row
+    Color selection_fg;
+    Color danger;           // destructive button, errors
+    Color on_danger;
+};
+
 struct Theme {
     std::string name;
 
@@ -148,11 +169,32 @@ struct Theme {
     // Fills the component colours from the base colours (every preset calls this).
     void derive();
 
+    // ---- customization (each returns a modified copy; chain them) ----
+    // Replace every colour from a palette; metrics, chrome style, fonts and motion are kept.
+    Theme with_palette(const ThemePalette& p) const;
+    // Recolour the accent (primary button, checks, switches, sliders, links, focus ring). Text on
+    // the accent and the link colour are picked for contrast against it / the window.
+    Theme with_accent(Color accent) const;
+    // Metrics, window-chrome style, fonts and motion of `look`; colours of this theme.
+    Theme with_look_of(const Theme& look) const;
+    // Scale every corner radius (0 = square, 1 = as designed, 2 = twice as round).
+    Theme with_roundness(float scale) const;
+    // Body text size in px; small and heading sizes keep their proportions.
+    Theme with_font_size(float px) const;
+    bool is_dark() const { return window_bg.is_dark(); }
+
     // ---- presets ----
     static Theme vscode_dark();    // matches the reference VS Code setup (black, teal accent)
-    static Theme vscode_light();   // VS Code "Light Modern" on a white window
+    static Theme vscode_light();   // the vscode_dark palette re-toned for a light window
     static Theme adwaita_light();
     static Theme adwaita_dark();
+    static Theme nord();           // Nord: Polar Night background, Frost accents, Aurora red
+    static Theme abyss();          // VS Code Abyss: deep navy, blue text, ocean-blue accent
+    static Theme absolute_dark();  // pure black, neutral greys, white accent
+    static Theme absolute_light(); // pure white, neutral greys, black accent
+
+    struct Preset { const char* name; Theme (*make)(); };
+    static const std::vector<Preset>& presets();   // every built-in preset, dark/light pairs adjacent
     static Theme light() { return vscode_light(); }   // toolkit defaults
     static Theme dark() { return vscode_dark(); }
 

@@ -21,6 +21,7 @@ hover/press/focus/disabled/checked), `Signal<…>` (events), `glyph()` / `icons:
 | ✅ | Button | `Button` | `widgets/button.h` | ✓ | Primary, Secondary, Destructive, Flat; label, icon or both; Space/Enter |
 | ✅ | Icon button | `Button(Image, Flat/Circular)` | `widgets/button.h` | ✓ | Toolbar-style square or round |
 | ✅ | Toggle button | `ToggleButton` | `widgets/toggles.h` | ✓ | Stays on while checked (accent outline); text or icon |
+| ✅ | Color swatch / swatch picker | `ColorSwatch`, `ColorSwatchPicker` | `widgets/color_swatch.h` | ✓ | Round checkable chip (check mark + ring when selected, contrast-picked mark colour); single-selection row |
 | ✅ | Link button | `Button(…, ButtonStyle::Link)` | `widgets/button.h` | ✓ | Accent text, underline fades in on hover, hand cursor |
 | ✅ | Check box | `CheckBox` | `widgets/toggles.h` | ✓ | Animated check, indeterminate state, label click target |
 | ✅ | Radio button | `RadioButton` + `RadioGroup` | `widgets/toggles.h` | ✓ | Exclusive selection, dot grows in; demo radios switch the theme |
@@ -82,7 +83,8 @@ Not part of the basic gallery. Some already exist in the library.
 
 | Status | Piece | Where | Notes |
 |:--:|---|---|---|
-| ✅ | Theme presets + derived tokens | `widgets/theme.h` | VS Code Dark/Light, Adwaita Dark/Light; `Theme::derive()` fills component colours |
+| ✅ | Theme presets + derived tokens | `widgets/theme.h` | VS Code Dark/Light, Adwaita Dark/Light, Absolute Dark/Light, Nord, Abyss (`Theme::presets()`); `Theme::derive()` fills component colours |
+| ✅ | Theme customization | `ThemePalette`, `Theme::with_*` | `widgets/theme.h` | A theme from a 16-colour palette (`with_palette`); `with_accent` (contrast-safe link/on-accent colours), `with_look_of` (metrics + chrome of another theme), `with_roundness`, `with_font_size` |
 | ✅ | Interaction states | `widgets/state.h` (`StateLayer`) | Hover/press/focus-visible/disabled/checked/hover-within, animated |
 | ✅ | Popup layer | `WidgetHost::show_popup()` | Positioning (flip, clamp), outside-click and Escape dismissal, focus return, shadow |
 | ✅ | Tooltips | `WidgetHost` | Hover delay, single bubble |

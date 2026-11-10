@@ -38,16 +38,11 @@ int main(int argc, char** argv) {
     fprintf(stderr, "hello: platform=%s renderer=%s\n", metrics.platform.c_str(), metrics.backend.c_str());
     demo.set_metrics(metrics);
 
-    // ---- theme: VS Code Dark to start; radio buttons pick a preset, T toggles dark/light ----
-    int theme_index = 0;
-    auto apply_theme = [&](int i, bool animate) {
-        theme_index = i;
-        win.set_theme(hello::Demo::presets()[(size_t)i].second, animate);   // every widget cross-fades
-        demo.show_theme(i);
-    };
-    apply_theme(0, false);
-    demo.theme_selected.connect([&](int i) { apply_theme(i, true); });
-    auto toggle_theme = [&] { apply_theme(theme_index ^ 1, true); };
+    // ---- theme: VS Code Dark to start; "Appearance" picks and customizes, T toggles dark/light ----
+    demo.theme_changed.connect([&](bool animate) { win.set_theme(demo.current_theme(), animate); });
+    demo.select_preset(0);
+    win.set_theme(demo.current_theme(), false);
+    auto toggle_theme = [&] { demo.toggle_dark(); };
 
     // ---- frame statistics ----
     auto fps_start = Clock::now();

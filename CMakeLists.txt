@@ -132,6 +132,7 @@ add_library(uitk_widgets STATIC
     src/widgets/list.cpp
     src/widgets/notification.cpp
     src/widgets/toggles.cpp
+    src/widgets/color_swatch.cpp
     src/widgets/range.cpp
     src/widgets/text_field.cpp
     src/widgets/dropdown.cpp

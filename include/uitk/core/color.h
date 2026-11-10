@@ -1,4 +1,5 @@
 #pragma once
+#include <cmath>
 #include <cstdint>
 
 namespace uitk {
@@ -41,6 +42,22 @@ struct Color {
         return (uint32_t(a) << 24) | (uint32_t(r) << 16) | (uint32_t(g) << 8) | uint32_t(b);
     }
     friend constexpr bool operator==(Color, Color) = default;
+
+    // WCAG relative luminance, 0 (black) .. 1 (white); alpha is ignored.
+    float luminance() const {
+        auto lin = [](uint8_t c) {
+            float v = c / 255.f;
+            return v <= 0.04045f ? v / 12.92f : std::pow((v + 0.055f) / 1.055f, 2.4f);
+        };
+        return 0.2126f * lin(r) + 0.7152f * lin(g) + 0.0722f * lin(b);
+    }
+    bool is_dark() const { return luminance() < 0.18f; }   // ~ the black/white text crossover
 };
+
+// WCAG contrast ratio between two opaque colours: 1 (same) .. 21 (black on white).
+inline float contrast_ratio(Color a, Color b) {
+    float la = a.luminance(), lb = b.luminance();
+    return (std::fmax(la, lb) + 0.05f) / (std::fmin(la, lb) + 0.05f);
+}
 
 } // namespace uitk

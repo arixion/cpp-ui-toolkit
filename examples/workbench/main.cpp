@@ -324,11 +324,9 @@ struct Workbench {
         view.add_check("&Grid Lines", false, [this](bool on) { table->set_grid_lines(on); });
         view.add_separator();
         Menu& themes = view.add_submenu("&Theme");
-        struct T { const char* name; Theme (*make)(); };
-        static const T kThemes[] = {{"VS Code &Dark", Theme::vscode_dark}, {"VS Code &Light", Theme::vscode_light},
-                                    {"&Adwaita Dark", Theme::adwaita_dark}, {"Adwaita L&ight", Theme::adwaita_light}};
-        for (int i = 0; i < 4; ++i)
-            themes.add_radio(1, kThemes[i].name, i == 0, [this, i] { if (set_theme) set_theme(kThemes[i].make()); });
+        const auto& presets = Theme::presets();
+        for (size_t i = 0; i < presets.size(); ++i)
+            themes.add_radio(1, presets[i].name, i == 0, [this, make = presets[i].make] { if (set_theme) set_theme(make()); });
 
         Menu& help = bar->add_menu("&Help");
         help.add("&Keyboard Shortcuts", [this] {
