@@ -166,13 +166,16 @@ if(WIN32)
         endif()
         # Bundled third-party code (HarfBuzz, ICU, libpng, ...) is in separate .libs; take them all.
         file(GLOB _libs "${dir}/*.lib")
+        # PartitionAlloc's allocator_shim replaces malloc/free/new/delete, which clashes with the
+        # /MD UCRT (LNK2005). Skia only needs the standard allocation functions, so leave it out.
+        list(FILTER _libs EXCLUDE REGEX "/allocator_shim\\.lib$")
         add_library(${target} INTERFACE)
         target_include_directories(${target} SYSTEM INTERFACE "${SKIA_SOURCE_DIR}")
         target_compile_definitions(${target} INTERFACE
             SK_XML SK_TYPEFACE_FACTORY_DIRECTWRITE SK_FONTMGR_DIRECTWRITE_AVAILABLE
             SK_SHAPER_HARFBUZZ_AVAILABLE SK_SHAPER_UNICODE_AVAILABLE SK_UNICODE_AVAILABLE
             SK_UNICODE_ICU_IMPLEMENTATION SK_ENABLE_SVG SK_ENABLE_PARAGRAPH)
-        target_link_libraries(${target} INTERFACE ${_libs} user32 gdi32 ole32 oleaut32 advapi32 dwrite windowscodecs)
+        target_link_libraries(${target} INTERFACE ${_libs} user32 gdi32 ole32 oleaut32 advapi32 dwrite windowscodecs winmm)
         set_property(TARGET ${target} PROPERTY UITK_ICU_DATA "${dir}/icudtl.dat")
     endfunction()
 else()
