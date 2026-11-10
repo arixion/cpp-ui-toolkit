@@ -1,0 +1,10 @@
+# Toad editor: uitk front end over the engine. Uses the GPU backend when it is built.
+if(UITK_RENDER_GPU)
+    set(_toad_render uitk::render_gpu)
+else()
+    set(_toad_render uitk::render_cpu)
+endif()
+add_executable(toad_editor src/main.cpp)
+target_link_libraries(toad_editor PRIVATE toad::engine uitk::widgets ${_toad_render})
+uitk_warnings(toad_editor)
+uitk_runtime_files(toad_editor)

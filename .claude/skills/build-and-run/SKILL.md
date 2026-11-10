@@ -1,6 +1,6 @@
 ---
 name: build-and-run
-description: Build the cpp-ui-toolkit libraries and examples (CPU and GPU render backends; Linux Wayland + X11, Windows Win32) with CMake/Ninja, run tests, launch the hello example, and render offscreen snapshots to PNG for visual checks. Use when asked to build, run, launch, rebuild, test, benchmark, or screenshot the app, to check the Windows build, or to confirm a change works.
+description: Build the Toad monorepo (uitk UI toolkit, toad engine, toad editor) and the uitk examples (CPU and GPU render backends; Linux Wayland + X11, Windows Win32) with CMake/Ninja, run tests, launch the hello example, and render offscreen snapshots to PNG for visual checks. Use when asked to build, run, launch, rebuild, test, benchmark, or screenshot the app, to check the Windows build, or to confirm a change works.
 ---
 
 # Build and run cpp-ui-toolkit (Linux; Windows in section 5)
@@ -16,7 +16,10 @@ Other examples, which are complex controls kept out of the hello gallery:
 Both accept `--dir PATH` and `--snapshot out.png [--dark]`. The workbench also accepts
 `--menu`, `--context` and `--dialog`.
 
-Use `build-linux/`. Don't use `build/`: it's a stale cache made under WSL.
+Repository layout (monorepo): `uitk/` (toolkit, its own CMake project), `engine/` (`toad::engine`,
+must not depend on uitk), `editor/` (`toad_editor`, uitk + engine), shared Skia in
+`third_party/skia`, Skia build scripts in `tools/`. Build from the root into `build/`; outputs land
+per subproject: `build/uitk/hello_gpu`, `build/uitk/uitk_snapshot_cpu`, `build/editor/toad_editor`.
 
 ## 1. Skia (one-time, ~15–30 min each)
 
@@ -31,24 +34,27 @@ The script pins `chrome/m157` and uses the system freetype/harfbuzz/icu/png/jpeg
 ## 2. Build + test
 
 ```bash
-cmake -S . -B build-linux -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug \
       -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DUITK_RENDER_GPU=ON
-cmake --build build-linux
-ctest --test-dir build-linux --output-on-failure
+cmake --build build
+ctest --test-dir build --output-on-failure
 ```
 Use `-DUITK_RENDER_GPU=OFF` if only the CPU Skia is built. Report any compiler error together
 with its output, and don't call the build done if a target failed. `compile_commands.json` is
-symlinked at the repo root for clangd. Without it, the editor shows false "file not found" errors.
+symlinked at the repo root (`ln -sf build/compile_commands.json .`) for clangd. Without it, the editor shows false "file not found" errors.
 
 ## 3. Run
+
+Editor: `(./build/editor/toad_editor > "<scratchpad>/editor.log" 2>&1 &)`; it logs
+`toad_editor: platform=... renderer=...` on start. Stop it with `kill $(pidof toad_editor)`.
 
 Stop old instances first with `kill $(pidof hello_cpu) $(pidof hello_gpu) 2>/dev/null`.
 Use `pidof`, never `pgrep`/`pkill -f`: those match your own shell command.
 
 ```bash
 LOG=<scratchpad>/hello.log
-(./build-linux/hello_gpu > "$LOG" 2>&1 &)                         # native Wayland
-(UITK_PLATFORM=x11 ./build-linux/hello_cpu > "$LOG.x11" 2>&1 &)   # force X11 (XWayland)
+(./build/uitk/hello_gpu > "$LOG" 2>&1 &)                         # native Wayland
+(UITK_PLATFORM=x11 ./build/uitk/hello_cpu > "$LOG.x11" 2>&1 &)   # force X11 (XWayland)
 sleep 2; pidof hello_gpu hello_cpu; cat "$LOG"
 ```
 The log line `hello: platform=<wayland|x11> renderer=<skia-raster | skia-ganesh-gles (<GPU>)>` means
@@ -61,7 +67,7 @@ Environment overrides:
 - `UITK_REDUCED_MOTION=1` turns animations off (transitions complete instantly).
 - `UITK_NO_SHM=1` makes X11 present with plain `XPutImage` instead of MIT-SHM shared memory (for comparison or debugging).
 
-Benchmark: `./build-linux/hello_gpu --bench 5` redraws continuously for 5 s and prints average fps.
+Benchmark: `./build/uitk/hello_gpu --bench 5` redraws continuously for 5 s and prints average fps.
 stderr also shows the draw time in ms per frame. The fps is capped by the display (~60), so compare
 the ms/frame numbers between backends.
 
@@ -75,7 +81,7 @@ minimize/maximize/close.
 GNOME blocks command-line screenshots of Wayland windows. Use these instead:
 - **Offscreen snapshot** (exactly what the app paints):
   ```bash
-  ./build-linux/uitk_snapshot_cpu <scratchpad>/s.png [--dark] [--scale 2] [--size 900x600] [--hover min|max|close] [--maximized]
+  ./build/uitk/uitk_snapshot_cpu <scratchpad>/s.png [--dark] [--scale 2] [--size 900x600] [--hover min|max|close] [--maximized]
   ```
   `uitk_snapshot_gpu` renders through headless EGL instead. To check the two backends match,
   `magick compare -metric AE -fuzz 2% a.png b.png diff.png`. Crop off the bottom info line first,
@@ -97,13 +103,13 @@ desktop GL via WGL), DirectWrite fonts in `text_skia.cpp`, the event loop in `ap
 **Compile check from Linux** (no Windows machine needed; catches compile errors, not link/runtime):
 ```bash
 S=<scratchpad>
-for f in src/core/*.cpp src/platform/windows/*.cpp src/render/skia/*.cpp src/render/cpu/*.cpp \
-         src/render/gpu/backend_gpu.cpp src/render/gpu/wgl_context.cpp src/widgets/*.cpp \
-         examples/*/*.cpp tools/*.cpp tests/*.cpp; do
+for f in uitk/src/core/*.cpp uitk/src/platform/windows/*.cpp uitk/src/render/skia/*.cpp uitk/src/render/cpu/*.cpp \
+         uitk/src/render/gpu/backend_gpu.cpp uitk/src/render/gpu/wgl_context.cpp uitk/src/widgets/*.cpp \
+         uitk/examples/*/*.cpp uitk/tools/*.cpp uitk/tests/*.cpp engine/src/*.cpp editor/src/*.cpp; do
   x86_64-w64-mingw32-g++ -std=c++20 -fsyntax-only -Wall -Wextra -Wpedantic -Wno-missing-field-initializers \
     -DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0A00 -DSK_GANESH -DSK_GL -DSK_ENABLE_SVG -DSK_ENABLE_PARAGRAPH \
     -DSK_UNICODE_AVAILABLE -DSK_SHAPER_HARFBUZZ_AVAILABLE -DUITK_DEFAULT_ICON_DIR='"x"' -DUITK_HELLO_BACKEND='"CPU"' \
-    -DUITK_ASSETS_DIR='"x"' -DUITK_HELLO_DIR='"x"' -Iinclude -Ibuild-linux/generated -isystem third_party/skia/src \
+    -DUITK_ASSETS_DIR='"x"' -DUITK_HELLO_DIR='"x"' -Iuitk/include -Iuitk/examples/hello -Iengine/include -Ibuild/uitk/generated -isystem third_party/skia/src \
     "$f" 2>&1 | grep -E 'error|warning' && echo "^^ $f"
 done
 ```
@@ -122,7 +128,8 @@ powershell -ExecutionPolicy Bypass -File tools\build_skia.ps1 gpu
 cmake -S . -B build-win -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DUITK_RENDER_GPU=ON
 cmake --build build-win
 ctest --test-dir build-win --output-on-failure
-build-win\workbench_gpu.exe
+build-win\editor\toad_editor.exe
+build-win\uitk\workbench_gpu.exe
 ```
 Skia is built with clang-cl, `/MD` and RTTI on; the app may use cl.exe or clang-cl. CMake forces
 the `/MD` runtime in every configuration (Debug included), so the CRTs always match. `icudtl.dat`

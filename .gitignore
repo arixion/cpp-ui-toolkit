@@ -1,7 +1,6 @@
 third_party/skia/
-build-linux/
-compile_commands.json
 build/
-build-win/
-build-ci/
+build-*/
+compile_commands.json
 out/
+.claude/settings.local.json

@@ -1,10 +1,10 @@
-# Windows build: Skia (cached), every target with MSVC, the test suite, offscreen snapshots,
+# Windows build: Skia (cached), every target (uitk, engine, editor) with MSVC, the test suite, offscreen snapshots,
 # and a smoke test that the examples open a real window and keep running.
 name: windows
 
 on:
   push:
-    branches: [main, "windows/**", "feature/**"]
+    branches: [main, monorepo, "windows/**", "feature/**"]
   pull_request:
   workflow_dispatch:
 
@@ -57,7 +57,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force out | Out-Null
-          $b = "build-ci"
+          $b = "build-ci/uitk"
           & "$b/uitk_snapshot_cpu.exe" out/hello_cpu.png
           & "$b/uitk_snapshot_gpu.exe" out/hello_gpu.png
           & "$b/workbench_cpu.exe" --snapshot out/workbench.png --dir $PWD
@@ -69,9 +69,11 @@ jobs:
         shell: pwsh
         run: |
           $fail = $false
-          foreach ($app in "hello_cpu", "hello_gpu", "workbench_cpu", "workbench_gpu", "files_cpu") {
+          $apps = @{ "hello_cpu" = "uitk"; "hello_gpu" = "uitk"; "workbench_cpu" = "uitk"; "workbench_gpu" = "uitk";
+                     "files_cpu" = "uitk"; "toad_editor" = "editor" }
+          foreach ($app in $apps.Keys) {
             $log = "out/$app.log"
-            $p = Start-Process -FilePath "build-ci/$app.exe" -PassThru -RedirectStandardError $log -RedirectStandardOutput "out/$app.out"
+            $p = Start-Process -FilePath "build-ci/$($apps[$app])/$app.exe" -PassThru -RedirectStandardError $log -RedirectStandardOutput "out/$app.out"
             Start-Sleep -Seconds 6
             if ($p.HasExited) {
               Write-Host "::error::$app exited early with code $($p.ExitCode)"; Get-Content $log; $fail = $true
